@@ -51,9 +51,9 @@ export const markets: Market[] = [
 ];
 
 export const accounts: Account[] = [
-  { id: "CT-8214", createdAt: todayISO(), banqueiroId: "profile-bz0174", banqueiroNome: "Ana Silva Domingos", clienteNome: "Rosa Capalo", bi: "002948221LA048", telefone: "945 221 009", pacote: "Pacote Zungueira Plus", mercadoId: "market-30", mercadoNome: "Mercado do 30", status: "aberta" },
-  { id: "CT-8213", createdAt: todayISO(), banqueiroId: "profile-bz0174", banqueiroNome: "Ana Silva Domingos", clienteNome: "Esperanca Tchitumba", bi: "008421994LA034", telefone: "932 112 880", pacote: "Pacote Zungueira Basico", mercadoId: "market-30", mercadoNome: "Mercado do 30", status: "aberta" },
-  { id: "CT-8211", createdAt: todayISO(), banqueiroId: "profile-bz0142", banqueiroNome: "Joao Kiala", clienteNome: "Madalena Sapalo", bi: "003821990LA012", telefone: "923 774 201", pacote: "Pacote Zungueira Empreendedora", mercadoId: "market-kikolo", mercadoNome: "Mercado do Kikolo", status: "pendente" }
+  { id: "CT-8214", createdAt: todayISO(), banqueiroId: "profile-bz0174", banqueiroNome: "Ana Silva Domingos", clienteNome: "Rosa Capalo", bi: "002948221LA048", telefone: "945 221 009", celular: "945 221 009", endereco: "Mercado do 30, Banca 12", pacote: "Pacote Zungueira Plus", pacoteStatus: "ativo", tpaStatus: "entregue", mercadoId: "market-30", mercadoNome: "Mercado do 30", status: "aberta" },
+  { id: "CT-8213", createdAt: todayISO(), banqueiroId: "profile-bz0174", banqueiroNome: "Ana Silva Domingos", clienteNome: "Esperanca Tchitumba", bi: "008421994LA034", telefone: "932 112 880", celular: "932 112 880", endereco: "Mercado do 30, Banca 8", pacote: "Pacote Zungueira Basico", pacoteStatus: "ativo", tpaStatus: "por_entregar", mercadoId: "market-30", mercadoNome: "Mercado do 30", status: "aberta" },
+  { id: "CT-8211", createdAt: todayISO(), banqueiroId: "profile-bz0142", banqueiroNome: "Joao Kiala", clienteNome: "Madalena Sapalo", bi: "003821990LA012", telefone: "923 774 201", celular: "923 774 201", endereco: "Mercado do Kikolo, Banca 5", pacote: "Pacote Zungueira Empreendedora", pacoteStatus: "por_abrir", tpaStatus: "sem_tpa", mercadoId: "market-kikolo", mercadoNome: "Mercado do Kikolo", status: "pendente" }
 ];
 
 export const presences: Presence[] = [
