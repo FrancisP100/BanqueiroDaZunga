@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="pt-AO">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bankeiros da Zunga - BCI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Inter', 'system-ui', 'sans-serif'],
+          display: ['Fraunces', 'Georgia', 'serif'],
+        },
+        colors: {
+          bci: {
+            pink: '#E91E63',
+            pinkDark: '#c2185b',
+            pinkSoft: '#fdf0f5',
+            navy: '#101c36',
+            navy2: '#1a2b4c',
+            navySoft: '#1f3458',
+            ink: '#0f172a',
+            muted: '#6b778c',
+            line: '#e6e8ef',
+            bg: '#f6f7fb'
+          }
+        },
+        boxShadow: {
+          'soft': '0 8px 32px rgba(16, 28, 54, 0.08)',
+          'card': '0 4px 20px rgba(16, 28, 54, 0.06)',
+          'pink': '0 10px 30px rgba(233, 30, 99, 0.22)'
+        }
+      }
+    }
+  }
+</script>
+<style type="text/tailwindcss">
+  body { background:#f6f7fb; color:#101c36; }
+  .hero-zumba {
+    background-image: linear-gradient(rgba(16, 28, 54, 0.62), rgba(16, 28, 54, 0.60)), url('https://images.unsplash.com/photo-1547471080-7cc2caa01a7e?q=80&w=2070&auto=format&fit=crop');
+    background-size: cover;
+    background-position: center 35%;
+  }
+  .hero-zumba::before {
+    content:'';
+    position:absolute; inset:0;
+    border: 10px solid rgba(233,30,99,0.26);
+    pointer-events:none;
+  }
+  @media(max-width:640px){
+    .hero-zumba::before{ border-width:6px; }
+  }
+  .bci-scroll::-webkit-scrollbar{ width:6px;height:6px }
+  .bci-scroll::-webkit-scrollbar-thumb{ background:#d6dbe6; border-radius:99px }
+  .leaflet-container { border-radius: 18px; font-family: Inter, sans-serif; }
+  .map-marker-green { background:#16a34a; width:14px;height:14px;border-radius:50%; border:3px solid white; box-shadow:0 0 0 4px rgba(22,163,74,.22);}
+  .map-marker-red { background:#ef4444; width:14px;height:14px;border-radius:50%; border:3px solid white; box-shadow:0 0 0 4px rgba(239,68,68,.22);}
+</style>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23E91E63'/%3E%3Ctext x='32' y='41' text-anchor='middle' font-family='Inter,Arial,700' font-weight='800' font-size='26' fill='white'%3EBCI%3C/text%3E%3C/svg%3E">
+</head>
+<body class="font-sans antialiased min-h-screen">
+<div id="app"></div>
+
+<!-- Toast -->
+<div id="toast" class="fixed z-[100] bottom-5 left-1/2 -translate-x-1/2 px-4 py-3 rounded-full bg-bci-navy text-white text-sm font-medium shadow-soft opacity-0 pointer-events-none transition-all duration-300"></div>
+
+<script>
+/* ============================
+   BANKEIROS DA ZUNGA - Mock Google Sheets DB
+   Tudo salvo em localStorage, com opção de conectar a SheetDB / Apps Script
+   ============================ */
+
+const SHEET_TABLES = ['Usuarios_Banqueiros','Usuarios_Chefes','Presenca','Contas','Locais'];
+
+const DEFAULT_DB = {
+  Usuarios_Banqueiros: [
+    { nome: "Ana Silva Domingos", id_banqueiro: "BZ0174", telefone: "923 450 110", provincia: "Luanda" },
+    { nome: "João Kiala", id_banqueiro: "BZ0142", telefone: "926 881 003", provincia: "Luanda" },
+    { nome: "Telma Cassinda", id_banqueiro: "BZ0211", telefone: "921 109 442", provincia: "Benguela" }
+  ],
+  Usuarios_Chefes: [
+    { nome: "Carlos Manuel Vitor", id_chefe: "CH-08", area: "Luanda Sul" },
+    { nome: "Madalena Chimuco", id_chefe: "CH-03", area: "Benguela" }
+  ],
+  Locais: [
+    { id: "L01", nome: "Mercado do 30", provincia: "Luanda", lat: -8.9256, lng: 13.3612 },
+    { id: "L02", nome: "Mercado do Kikolo", provincia: "Luanda", lat: -8.7865, lng: 13.2847 },
+    { id: "L03", nome: "Mercado da Mabunda", provincia: "Luanda", lat: -8.8901, lng: 13.2377 },
+    { id: "L04", nome: "Balcão BCI Viana", provincia: "Luanda", lat: -8.9045, lng: 13.3743 },
+    { id: "L05", nome: "Mercado 4 de Abril – Rocha", provincia: "Benguela", lat: -12.5763, lng: 13.4035 },
+    { id: "L06", nome: "Mercado do Benfica", provincia: "Luanda", lat: -9.0271, lng: 13.1614 },
+    { id: "L07", nome: "Mercado do Huambo Central", provincia: "Huambo", lat: -12.7761, lng: 15.7392 }
+  ],
+  Contas: [
+    { id: "CT-8214", data: daysAgo(0), banqueiro_id: "BZ0174", banqueiro_nome: "Ana Silva Domingos", cliente_nome: "Rosa Capalo", bi: "002948221LA048", telefone: "945 221 009", pacote: "Pacote Zungueira Plus", status: "aberta", local: "Mercado do 30" },
+    { id: "CT-8213", data: daysAgo(0), banqueiro_id: "BZ0174", banqueiro_nome: "Ana Silva Domingos", cliente_nome: "Esperança Tchitumba", bi: "008421994LA034", telefone: "932 112 880", pacote: "Pacote Zungueira Básico", status: "aberta", local: "Mercado do 30" },
+    { id: "CT-8211", data: daysAgo(0), banqueiro_id: "BZ0142", banqueiro_nome: "João Kiala", cliente_nome: "Madalena Sapalo", bi: "003821990LA012", telefone: "923 774 201", pacote: "Pacote Zungueira Empreendedora", status: "pendente", local: "Mercado do Kikolo" },
+    { id: "CT-8202", data: daysAgo(1), banqueiro_id: "BZ0174", banqueiro_nome: "Ana Silva Domingos", cliente_nome: "Luísa Manuel", bi: "007128882LA041", telefone: "944 002 118", pacote: "Pacote Zungueira Plus", status: "aberta", local: "Mercado do 30" },
+    { id: "CT-8190", data: daysAgo(1), banqueiro_id: "BZ0211", banqueiro_nome: "Telma Cassinda", cliente_nome: "Eunice Calunga", bi: "004449912BE011", telefone: "927 540 001", pacote: "Pacote Zungueira Básico", status: "aberta", local: "Mercado 4 de Abril – Rocha" },
+    { id: "CT-8188", data: daysAgo(2), banqueiro_id: "BZ0142", banqueiro_nome: "João Kiala", cliente_nome: "Domingas Furtado", bi: "009221188LA032", telefone: "933 991 204", pacote: "Pacote Zungueira Plus", status: "aberta", local: "Mercado da Mabunda" },
+  ],
+  Presenca: [
+    { id: "PR-1291", banqueiro_id: "BZ0174", nome: "Ana Silva Domingos", data: todayISO(), entrada: "07:52", saida: "", lat: -8.9254, lng: 13.3615, local_nome: "Mercado do 30", status: "no_local", provincia: "Luanda" },
+    { id: "PR-1290", banqueiro_id: "BZ0142", nome: "João Kiala", data: todayISO(), entrada: "08:14", saida: "", lat: -8.7868, lng: 13.2849, local_nome: "Mercado do Kikolo", status: "no_local", provincia: "Luanda" },
+    { id: "PR-1289", banqueiro_id: "BZ0211", nome: "Telma Cassinda", data: todayISO(), entrada: "08:40", saida: "", lat: -12.5801, lng: 13.4090, local_nome: "Mercado 4 de Abril – Rocha", status: "fora_do_local", provincia: "Benguela" },
+  ]
+};
+
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function daysAgo(n){ const d=new Date(); d.setDate(d.getDate()-n); return d.toISOString().slice(0,10); }
+
+const DB = {
+  configKey: 'bci_zumba_sheet_config',
+  getConfig(){
+    try { return JSON.parse(localStorage.getItem(this.configKey) || '{}'); } catch { return {}; }
+  },
+  saveConfig(cfg){ localStorage.setItem(this.configKey, JSON.stringify(cfg)); },
+  init(){
+    SHEET_TABLES.forEach(t => {
+      const key = 'bci_zumba_'+t.toLowerCase();
+      if(!localStorage.getItem(key)){
+        localStorage.setItem(key, JSON.stringify(DEFAULT_DB[t] || []));
+      }
+    });
+  },
+  read(table){
+    return JSON.parse(localStorage.getItem('bci_zumba_'+table.toLowerCase()) || '[]');
+  },
+  write(table, rows){
+    localStorage.setItem('bci_zumba_'+table.toLowerCase(), JSON.stringify(rows));
+  },
+  insert(table, row){
+    const rows = this.read(table);
+    rows.unshift(row);
+    this.write(table, rows);
+    return row;
+  },
+  update(table, matchFn, patch){
+    const rows = this.read(table);
+    const idx = rows.findIndex(matchFn);
+    if(idx > -1){ rows[idx] = {...rows[idx], ...patch}; this.write(table, rows); return rows[idx]; }
+    return null;
+  }
+};
+DB.init();
+
+/* Auth / Session */
+const Session = {
+  get(){ try { return JSON.parse(localStorage.getItem('bci_zumba_session')||'null'); } catch { return null } },
+  set(mode, user){ localStorage.setItem('bci_zumba_session', JSON.stringify({mode, user, at: Date.now()})); },
+  clear(){ localStorage.removeItem('bci_zumba_session'); }
+};
+
+/* Utils */
+const $ = sel => document.querySelector(sel);
+function toast(msg){
+  const t = $('#toast');
+  t.textContent = msg;
+  t.style.opacity = '1';
+  t.style.transform = 'translateX(-50%) translateY(-4px)';
+  clearTimeout(toast._tid);
+  toast._tid = setTimeout(()=> { t.style.opacity='0'; t.style.transform='translateX(-50%) translateY(6px)'; }, 2400);
+}
+function fmtDate(iso){ if(!iso) return '-'; const [y,m,d]=iso.split('-'); return `${d}/${m}/${y}`; }
+function nowHM(){ return new Date().toLocaleTimeString('pt-PT',{hour:'2-digit', minute:'2-digit'}); }
+function haversine(lat1, lon1, lat2, lon2){
+  const R=6371e3; const toRad = x=>x*Math.PI/180;
+  const dLat=toRad(lat2-lat1), dLon=toRad(lon2-lon1);
+  const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+function genId(prefix){ return prefix + '-' + Math.floor(8000 + Math.random()*1999); }
+
+/* State / Router */
+let appMode = 'banqueiro'; // 'banqueiro' | 'chefe'
+let route = 'dashboard';
+let session = Session.get();
+
+if(session && session.mode){
+  appMode = session.mode;
+}
+
+function navigate(r){ route = r; render(); }
+function switchAppMode(m){ appMode = m; route = 'dashboard'; render(); }
+function logout(){ Session.clear(); session=null; render(); }
+
+/* RENDER ROOT */
+function render(){
+  session = Session.get();
+  const app = document.getElementById('app');
+  if(!session){
+    app.innerHTML = AuthScreen(appMode);
+    bindAuth();
+    return;
+  }
+  if(session.mode !== appMode){
+    // user logged in other mode, force same
+    appMode = session.mode;
+  }
+
+  if(appMode === 'banqueiro'){
+    app.innerHTML = BanqueiroShell();
+    bindBanqueiro();
+  } else {
+    app.innerHTML = ChefeShell();
+    bindChefe();
+  }
+}
+
+/* =========== AUTH =========== */
+function AuthScreen(mode){
+  const isBanqueiro = mode === 'banqueiro';
+  return `
+  <div class="min-h-screen bg-[#f7f6f9] flex flex-col">
+    <header class="w-full bg-white border-b border-bci-line">
+      <div class="max-w-6xl mx-auto px-5 sm:px-8 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-[14px] bg-bci-pink flex items-center justify-center font-extrabold text-white tracking-tight">BCI</div>
+          <div>
+            <div class="text-[11px] text-bci-muted uppercase tracking-wider font-semibold">Banco de Comércio e Indústria</div>
+            <div class="text-[15px] font-[700] text-bci-navy">Bankeiros da Zunga</div>
+          </div>
+        </div>
+        <button id="toggleAppMode" class="text-[12.5px] font-semibold px-4 py-2 rounded-full border border-bci-line bg-white hover:bg-bci-bg transition">
+          ${isBanqueiro ? 'Ir para Painel dos Chefes →' : 'Ir para Área dos Banqueiros →'}
+        </button>
+      </div>
+    </header>
+
+    <div class="flex-1 grid lg:grid-cols-2">
+      <div class="relative hero-zumba min-h-[300px] lg:min-h-full flex items-end">
+        <div class="relative z-10 p-8 md:p-14 pb-12 text-white max-w-xl">
+          <div class="inline-flex text-[11px] font-semibold tracking-wider uppercase bg-white/12 border border-white/25 rounded-full px-3 py-1.5 mb-5 backdrop-blur">Inclusão Financeira • Angola</div>
+          <h1 class="font-display text-[42px] md:text-[56px] leading-[0.98] tracking-tight">
+            Banca onde<br/>a Zunga<br/>acontece.
+          </h1>
+          <p class="mt-5 text-white/85 text-[15.5px] leading-relaxed max-w-md">Abertura de contas simplificada para vendedoras e vendedores dos mercados informais. No terreno, com GPS, em menos de 5 minutos.</p>
+          <div class="flex items-center gap-5 mt-7 text-[13px] text-white/80">
+            <span>✓ GPS validado</span>
+            <span>✓ BI + Telefone</span>
+            <span>✓ Sheet integrado</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white flex items-center justify-center px-6 py-12 md:py-20">
+        <div class="w-full max-w-[420px]">
+          <div class="mb-7">
+            <div class="text-[12px] font-bold text-bci-pink uppercase tracking-wider">${isBanqueiro ? 'Área dos Banqueiros' : 'Painel dos Chefes'}</div>
+            <h2 class="text-[28px] font-[800] text-bci-navy mt-1 tracking-tight">Bem-vindo de volta</h2>
+            <p class="text-[14px] text-bci-muted mt-1">Entre com o seu ${isBanqueiro ? 'ID de Banqueiro' : 'ID de Chefe'} ou crie acesso.</p>
+          </div>
+
+          <div class="bg-[#fbfbfc] border border-bci-line rounded-[20px] p-[18px]">
+            <div class="flex bg-white rounded-[14px] border border-bci-line p-1 text-[13.5px] font-semibold">
+              <button data-auth-tab="login" class="auth-tab flex-1 py-2.5 rounded-[10px] bg-bci-navy text-white">Entrar</button>
+              <button data-auth-tab="register" class="auth-tab flex-1 py-2.5 rounded-[10px] text-bci-muted">Criar conta</button>
+            </div>
+
+            <form id="authForm" class="mt-5 space-y-4">
+              <div>
+                <label class="text-[12px] font-semibold text-bci-muted">Nome completo</label>
+                <input id="auth_nome" required class="w-full mt-1.5 rounded-xl border border-bci-line bg-white px-4 py-3.5 text-[15px] outline-none focus:ring-2 focus:ring-bci-pink/25 focus:border-bci-pink" placeholder="${isBanqueiro ? 'Ex: Ana Silva Domingos' : 'Ex: Carlos Manuel Vitor'}" />
+              </div>
+              <div>
+                <label class="text-[12px] font-semibold text-bci-muted">${isBanqueiro ? 'ID do Banqueiro' : 'ID do Chefe'}</label>
+                <input id="auth_id" required class="w-full mt-1.5 rounded-xl border border-bci-line bg-white px-4 py-3.5 text-[15px] outline-none focus:ring-2 focus:ring-bci-pink/25 focus:border-bci-pink" placeholder="${isBanqueiro ? 'Ex: BZ0174' : 'Ex: CH-08'}" />
+              </div>
+              <div id="auth_extra" class="hidden">
+                <label class="text-[12px] font-semibold text-bci-muted">Telefone (opcional)</label>
+                <input id="auth_tel" class="w-full mt-1.5 rounded-xl border border-bci-line bg-white px-4 py-3.5 text-[15px] outline-none focus:ring-2 focus:ring-bci-pink/25 focus:border-bci-pink" placeholder="923 000 000" />
+              </div>
+              <button class="w-full rounded-xl bg-bci-pink text-white font-[700] py-3.5 shadow-pink hover:bg-bci-pinkDark transition" type="submit" id="auth_submit_btn">Entrar na plataforma</button>
+              <p class="text-[11.8px] text-bci-muted text-center leading-relaxed pt-1">Modo demonstração. Os dados ficam guardados localmente e podem ser ligados a uma Google Sheet via SheetDB / Apps Script.</p>
+            </form>
+          </div>
+
+          <div class="mt-5 rounded-[16px] border border-dashed border-pink-200 bg-bci-pinkSoft px-4 py-3 text-[12.5px] text-[#a3134c]">
+            <b>Dica de teste:</b> Banqueiro: Ana Silva Domingos / BZ0174 — Chefe: Carlos Manuel Vitor / CH-08
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="border-t border-bci-line bg-white text-center text-[12px] text-bci-muted py-4">
+      BCI • Bankeiros da Zunga • Inclusão Financeira • Angola 2024
+    </footer>
+  </div>
+  `;
+}
+
+function bindAuth(){
+  $('#toggleAppMode').onclick = ()=>{ appMode = appMode === 'banqueiro' ? 'chefe' : 'banqueiro'; render(); };
+  let authMode = 'login';
+  document.querySelectorAll('.auth-tab').forEach(btn=>{
+    btn.onclick = () => {
+      authMode = btn.dataset.authTab;
+      document.querySelectorAll('.auth-tab').forEach(b=>{
+        b.classList.remove('bg-bci-navy','text-white');
+        b.classList.add('text-bci-muted');
+      });
+      btn.classList.add('bg-bci-navy','text-white');
+      btn.classList.remove('text-bci-muted');
+      $('#auth_extra').classList.toggle('hidden', authMode==='login');
+      $('#auth_submit_btn').textContent = authMode==='login' ? 'Entrar na plataforma' : 'Criar conta';
+    }
+  });
+
+  $('#authForm').onsubmit = (e)=>{
+    e.preventDefault();
+    const nome = $('#auth_nome').value.trim();
+    const id = $('#auth_id').value.trim();
+    const tel = ($('#auth_tel')?.value || '').trim();
+    if(!nome || !id){ toast('Preencha nome e ID'); return; }
+    const isBanqueiro = appMode==='banqueiro';
+    const table = isBanqueiro ? 'Usuarios_Banqueiros' : 'Usuarios_Chefes';
+    const idField = isBanqueiro ? 'id_banqueiro' : 'id_chefe';
+    const users = DB.read(table);
+    const found = users.find(u => (u.nome||'').toLowerCase() === nome.toLowerCase() && u[idField] === id);
+
+    if(authMode === 'register'){
+      if(found){ toast('Esse utilizador já existe. Faça login.'); return; }
+      const newUser = isBanqueiro ? { nome, id_banqueiro:id, telefone: tel, provincia:"Luanda"} : { nome, id_chefe:id, area:"Luanda"};
+      DB.insert(table, newUser);
+      Session.set(appMode, newUser);
+      toast('Conta criada com sucesso!');
+      render();
+      return;
+    } else {
+      if(!found){ toast('Credenciais inválidas. Verifique Nome + ID.'); return; }
+      Session.set(appMode, found);
+      toast('Sessão iniciada');
+      render();
+    }
+  };
+}
+
+/* =========== BANQUEIRO SHELL =========== */
+function BanqueiroShell(){
+  const user = Session.get().user;
+  return `
+  <div class="min-h-screen">
+    <!-- Topbar -->
+    <header class="sticky top-0 z-40 bg-white/92 backdrop-blur border-b border-bci-line">
+      <div class="max-w-7xl mx-auto px-4 sm:px-7 lg:px-8 h-[66px] flex items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <button id="btnOpenMenu" class="lg:hidden p-2 rounded-xl border border-bci-line">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <div class="w-10 h-10 rounded-[13px] bg-bci-pink flex items-center justify-center font-[800] text-white">BCI</div>
+          <div class="hidden sm:block">
+            <div class="text-[11px] text-bci-muted font-semibold tracking-wider uppercase">Bankeiros da Zunga</div>
+            <div class="text-[14.5px] font-[700] text-bci-navy -mt-0.5">Área dos Banqueiros</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <button id="btnSheetCfg" class="hidden sm:inline-flex text-[12.5px] font-semibold px-3.5 py-2 rounded-full border border-bci-line hover:bg-bci-bg">Google Sheets</button>
+          <button id="btnSwitchToChefe" class="hidden md:inline-flex text-[12.5px] font-semibold px-3.5 py-2 rounded-full bg-bci-navy text-white">Abrir Painel dos Chefes</button>
+          <div class="h-8 w-px bg-bci-line hidden sm:block"></div>
+          <div class="text-right hidden sm:block">
+            <div class="text-[12.5px] font-[700] text-bci-navy">${user.nome}</div>
+            <div class="text-[11.5px] text-bci-muted -mt-0.5">${user.id_banqueiro || user.id_chefe} • ${user.provincia||'Luanda'}</div>
+          </div>
+          <div class="w-9 h-9 rounded-full bg-bci-pinkSoft text-bci-pink font-[800] text-[12px] flex items-center justify-center">${initials(user.nome)}</div>
+          <button id="btnLogout" class="text-[12.5px] text-bci-muted hover:text-bci-navy font-semibold">Sair</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-7 lg:px-8 py-6 lg:py-9 grid grid-cols-12 gap-6 lg:gap-8">
+      <!-- Sidebar -->
+      <aside id="sideMenu" class="col-span-12 lg:col-span-3 xl:col-span-3">
+        <div class="bg-white border border-bci-line rounded-[22px] shadow-card p-3 lg:sticky lg:top-[90px]">
+          <nav class="space-y-1.5 text-[14px] font-semibold" id="bqNav">
+            ${[
+              ['dashboard','Dashboard','Início'],
+              ['abertura','Abertura de conta','Nova conta'],
+              ['fluxo','Fluxo de clientes','Em tempo real'],
+              ['contas_abertas','Contas abertas','Relatório'],
+              ['contas_pendentes','Contas pendentes','A acompanhar'],
+              ['pacotes','Leques do Cliente','Pacotes BCI'],
+              ['sobre','Sobre o Projeto','Zungueira'],
+            ].map(([k,label,sub])=>`
+              <button data-route="${k}" class="w-full text-left px-4 py-3 rounded-[14px] transition flex items-center justify-between ${route===k ? 'bg-bci-navy text-white' : 'hover:bg-bci-bg text-bci-navy'}">
+                <span>${label}</span>
+                <span class="text-[11px] font-medium ${route===k ? 'text-white/70' : 'text-bci-muted'}">${sub}</span>
+              </button>
+            `).join('')}
+          </nav>
+
+          <div class="mt-3 rounded-[16px] bg-bci-pinkSoft border border-pink-100 px-4 py-4">
+            <div class="text-[11px] font-bold text-bci-pink uppercase tracking-wider">Presença GPS</div>
+            <div id="presenceQuickStatus" class="text-[13px] text-[#a3134c] mt-1">Ainda não marcada hoje</div>
+            <button id="quickPresenceBtn" class="mt-3 w-full bg-bci-pink text-white font-[700] rounded-xl py-2.5 text-[13.5px] shadow-pink">Marcar presença</button>
+          </div>
+
+          <div class="px-2 pt-4 pb-2 text-[11.5px] text-bci-muted leading-relaxed">
+            Contas sincronizadas com <b>Contas</b>, <b>Presenca</b> e <b>Locais</b> na Google Sheet.
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main -->
+      <main class="col-span-12 lg:col-span-9">
+        ${BanqueiroRouteView()}
+      </main>
+    </div>
+
+    <!-- Sheet config modal -->
+    <div id="sheetModal" class="fixed inset-0 z-50 hidden">
+      <div class="absolute inset-0 bg-bci-navy/45" data-close-sheet></div>
+      <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[92%] max-w-lg bg-white rounded-[22px] shadow-soft p-6">
+        <div class="text-[18px] font-[800]">Conectar Google Sheets</div>
+        <p class="text-[13.5px] text-bci-muted mt-1">Cole aqui a URL da sua API SheetDB ou Google Apps Script. Enquanto não conectar, usamos armazenamento local (que replica a estrutura da Sheet).</p>
+        <label class="block mt-4 text-[12px] font-semibold text-bci-muted">SheetDB / Apps Script Endpoint</label>
+        <input id="sheetEndpoint" class="w-full mt-1.5 rounded-xl border border-bci-line px-4 py-3 text-[14px]" placeholder="https://sheetdb.io/api/v1/xxxx" />
+        <div class="flex gap-2 justify-end mt-4">
+          <button data-close-sheet class="px-4 py-2.5 rounded-xl border border-bci-line font-semibold text-[13.5px]">Fechar</button>
+          <button id="saveSheetCfg" class="px-4 py-2.5 rounded-xl bg-bci-navy text-white font-semibold text-[13.5px]">Guardar</button>
+        </div>
+        <div class="mt-4 text-[12px] text-bci-muted bg-bci-bg rounded-xl px-3 py-3">
+          <b>Abas necessárias:</b> Usuarios_Banqueiros, Usuarios_Chefes, Presenca, Contas, Locais (nome, provincia, lat, lng).
+        </div>
+      </div>
+    </div>
+  </div>
+  `;
+}
+
+function initials(name){
+  return name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+}
+
+function BanqueiroRouteView(){
+  const user = Session.get().user;
+  const contas = DB.read('Contas');
+  const minhas = contas.filter(c=>c.banqueiro_id === user.id_banqueiro);
+  const hoje = todayISO();
+  const contasHoje = contas.filter(c=>c.data===hoje);
+  const abertas = minhas.filter(c=>c.status==='aberta').length;
+  const pendentes = minhas.filter(c=>c.status==='pendente').length;
+
+  if(route==='dashboard'){
+    return `
+      <section class="relative hero-zumba rounded-[26px] overflow-hidden min-h-[300px] flex items-end shadow-card">
+        <div class="relative z-10 p-7 sm:p-11 text-white max-w-2xl">
+          <div class="uppercase tracking-wider text-[11px] font-[700] text-white/80">Bem-vindo, Banqueiro da Zumba</div>
+          <h2 class="font-display text-[36px] sm:text-[48px] leading-[1.04] mt-2">Olá, ${user.nome.split(' ')[0]}.<br/>Pronto para o mercado?</h2>
+          <p class="mt-3 text-white/85 max-w-lg text-[14.7px]">Abra contas em 4 minutos, marque presença com GPS e acompanhe o seu fluxo diário, tudo sincronizado com a base central.</p>
+          <div class="flex flex-wrap gap-3 mt-5">
+            <button data-route-go="abertura" class="px-5 py-3 rounded-full bg-bci-pink font-[700] shadow-pink">Abrir nova conta</button>
+            <button id="dashPresence" class="px-5 py-3 rounded-full bg-white/10 border border-white/30 font-[700] backdrop-blur">Marcar presença GPS</button>
+          </div>
+        </div>
+      </section>
+
+      <div class="grid sm:grid-cols-3 gap-4 mt-5">
+        ${[
+          ['Clientes hoje', contasHoje.length, 'pessoas atendidas'],
+          ['Contas abertas', contas.filter(c=>c.status==='aberta').length, 'aprovadas'],
+          ['Contas pendentes', contas.filter(c=>c.status==='pendente').length, 'a concluir'],
+        ].map(([t,v,s])=>`
+          <div class="bg-white rounded-[20px] border border-bci-line shadow-card px-5 py-5">
+            <div class="text-[12.5px] text-bci-muted font-semibold">${t}</div>
+            <div class="text-[34px] font-[800] tracking-tight text-bci-navy">${v}</div>
+            <div class="text-[12.5px] text-bci-muted">${s}</div>
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="bg-white rounded-[22px] border border-bci-line shadow-card mt-5">
+        <div class="px-5 sm:px-6 py-4 border-b border-bci-line flex items-center justify-between">
+          <div class="font-[800] text-[16px]">Últimas contas abertas por si</div>
+          <button data-route-go="contas_abertas" class="text-[13px] font-semibold text-bci-pink">Ver todas →</button>
+        </div>
+        <div class="overflow-auto bci-scroll">
+          <table class="w-full text-[13.5px]">
+            <thead class="text-[11.5px] uppercase tracking-wider text-bci-muted bg-bci-bg">
+              <tr><th class="text-left px-5 py-3 font-[700]">Cliente</th><th class="text-left px-5 py-3 font-[700]">BI</th><th class="text-left px-5 py-3 font-[700]">Pacote</th><th class="text-left px-5 py-3 font-[700]">Data</th><th class="text-left px-5 py-3 font-[700]">Status</th></tr>
+            </thead>
+            <tbody>
+              ${minhas.slice(0,5).map(c=>`
+                <tr class="border-t border-bci-line">
+                  <td class="px-5 py-3 font-semibold">${c.cliente_nome}</td>
+                  <td class="px-5 py-3 text-bci-muted">${c.bi}</td>
+                  <td class="px-5 py-3">${c.pacote}</td>
+                  <td class="px-5 py-3">${fmtDate(c.data)}</td>
+                  <td class="px-5 py-3"><span class="px-2.5 py-1 rounded-full text-[11.5px] font-[700] ${c.status==='aberta' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}">${c.status}</span></td>
+                </tr>
+              `).join('') || `<tr><td class="px-5 py-6 text-bci-muted" colspan="5">Ainda sem contas registadas.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  if(route==='abertura'){
+    const locais = DB.read('Locais');
+    return `
+      <div class="bg-white rounded-[22px] border border-bci-line shadow-card p-6 sm:p-8">
+        <div class="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div class="text-[12px] font-bold text-bci-pink uppercase tracking-wider">Banqueiros • Abertura de conta</div>
+            <h3 class="text-[26px] font-[800] tracking-tight mt-1">Abrir nova conta – Pacote Zungueira</h3>
+            <p class="text-[13.8px] text-bci-muted mt-1">Preencha os dados da cliente. O registo vai direto para a aba <b>Contas</b>.</p>
+          </div>
+          <div class="text-[12.5px] text-bci-muted bg-bci-bg rounded-xl px-3 py-2">Tempo médio: 3–5 min</div>
+        </div>
+        <form id="contaForm" class="grid md:grid-cols-2 gap-4 mt-6">
+          <div>
+            <label class="text-[12px] font-semibold text-bci-muted">Nome do cliente</label>
+            <input required name="cliente_nome" class="w-full mt-1.5 rounded-xl border border-bci-line px-4 py-3.5 outline-none focus:ring-2 focus:ring-bci-pink/20 focus:border-bci-pink" placeholder="Nome completo" />
+          </div>
+          <div>
+            <label class="text-[12px] font-semibold text-bci-muted">Nº do BI</label>
+            <input required name="bi" class="w-full mt-1.5 rounded-xl border border-bci-line px-4 py-3.5" placeholder="000000000LA000" />
+          </div>
+          <div>
+            <label class="text-[12px] font-semibold text-bci-muted">Telefone</label>
+            <input required name="telefone" class="w-full mt-1.5 rounded-xl border border-bci-line px-4 py-3.5" placeholder="923 000 000" />
+          </div>
+          <div>
+            <label class="text-[12px] font-semibold text-bci-muted">Tipo de pacote</label>
+            <select name="pacote" class="w-full mt-1.5 rounded-xl border border-bci-line px-4 py-3.5 bg-white">
+              <option>Pacote Zungueira Básico</option>
+              <option>Pacote Zungueira Plus</option>
+              <option>Pacote Zungueira Empreendedora</option>
+            </select>
+          </div>
+          <div class="md:col-span-2">
+            <label class="text-[12px] font-semibold text-bci-muted">Local / Mercado</label>
+            <select name="local" class="w-full mt-1.5 rounded-xl border border-bci-line px-4 py-3.5 bg-white">
+              ${locais.map(l=>`<option>${l.nome} – ${l.provincia}</option>`).join('')}
+            </select>
+          </div>
+          <div class="md:col-span-2 flex items-center gap-3 pt-2">
+            <button class="px-5 py-3.5 rounded-xl bg-bci-pink text-white font-[700] shadow-pink">Submeter conta</button>
+            <button type="button" data-route-go="dashboard" class="px-5 py-3.5 rounded-xl border border-bci-line font-semibold">Cancelar</button>
+            <span class="text-[12.5px] text-bci-muted">Será guardado em Contas com status “aberta”.</span>
+          </div>
+        </form>
+      </div>
+    `;
+  }
+
+  if(route==='fluxo'){
+    const contasHojeMine = minhas.filter(c=>c.data===hoje);
+    return `
+      <div class="bg-white rounded-[22px] border border-bci-line shadow-card p-6 sm:p-8">
+        <h3 class="text-[24px] font-[800]">Fluxo de clientes – hoje</h3>
+        <p class="text-bci-muted text-[14px]">Contador actualizado via Sheet <b>Contas</b>.</p>
+        <div class="grid sm:grid-cols-3 gap-4 mt-5">
+          <div class="rounded-[16px] bg-bci-bg px-5 py-4"><div class="text-[12px] text-bci-muted font-semibold">Você hoje</div><div class="text-[30px] font-[800]">${contasHojeMine.length}</div></div>
+          <div class="rounded-[16px] bg-bci-bg px-5 py-4"><div class="text-[12px] text-bci-muted font-semibold">Abertas</div><div class="text-[30px] font-[800]">${contasHojeMine.filter(c=>c.status==='aberta').length}</div></div>
+          <div class="rounded-[16px] bg-bci-bg px-5 py-4"><div class="text-[12px] text-bci-muted font-semibold">Pendentes</div><div class="text-[30px] font-[800]">${contasHojeMine.filter(c=>c.status==='pendente').length}</div></div>
+        </div>
+        <div class="overflow-auto bci-scroll mt-5 rounded-xl border border-bci-line">
+          <table class="w-full text-[13.5px]">
+            <thead class="bg-bci-bg text-[11.5px] uppercase tracking-wider text-bci-muted"><tr>
+              <th class="text-left px-4 py-3">Hora</th><th class="text-left px-4 py-3">Cliente</th><th class="text-left px-4 py-3">Pacote</th><th class="text-left px-4 py-3">Status</th>
+            </tr></thead>
+            <tbody>
+              ${contasHojeMine.map(c=>`<tr class="border-t border-bci-line"><td class="px-4 py-3 text-bci-muted">—</td><td class="px-4 py-3 font-semibold">${c.cliente_nome}</td><td class="px-4 py-3">${c.pacote}</td><td class="px-4 py-3">${c.status}</td></tr>`).join('') || `<tr><td class="px-4 py-5 text-bci-muted" colspan="4">Sem movimento registado hoje.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  if(route==='contas_abertas' || route==='contas_pendentes'){
+    const filtro = route==='contas_abertas' ? 'aberta' : 'pendente';
+    const lista = minhas.filter(c=>c.status===filtro);
+    return `
+      <div class="bg-white rounded-[22px] border border-bci-line shadow-card">
+        <div class="px-6 py-5 border-b border-bci-line flex items-center justify-between">
+          <div>
+            <div class="text-[12px] font-bold text-bci-pink uppercase tracking-wider">Controle • Banqueiro Individual</div>
+            <div class="text-[20px] font-[800]">${filtro === 'aberta' ? 'Contas abertas' : 'Contas pendentes'}</div>
+          </div>
+          <div class="text-[13px] text-bci-muted">${lista.length} registos</div>
+        </div>
+        <div class="overflow-auto bci-scroll">
+          <table class="w-full text-[13.5px] min-w-[720px]">
+            <thead class="text-[11.5px] uppercase tracking-wider text-bci-muted bg-bci-bg">
+              <tr>
+                <th class="px-5 py-3 text-left">ID</th>
+                <th class="px-5 py-3 text-left">Cliente</th>
+                <th class="px-5 py-3 text-left">BI</th>
+                <th class="px-5 py-3 text-left">Telefone</th>
+                <th class="px-5 py-3 text-left">Pacote</th>
+                <th class="px-5 py-3 text-left">Data</th>
+                <th class="px-5 py-3 text-left">Local</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${lista.map(c=>`
+                <tr class="border-t border-bci-line hover:bg-[#fafbff]">
+                  <td class="px-5 py-3 font-mono text-[12.5px]">${c.id}</td>
+                  <td class="px-5 py-3 font-semibold">${c.cliente_nome}</td>
+                  <td class="px-5 py-3 text-bci-muted">${c.bi}</td>
+                  <td class="px-5 py-3">${c.telefone}</td>
+                  <td class="px-5 py-3">${c.pacote}</td>
+                  <td class="px-5 py-3">${fmtDate(c.data)}</td>
+                  <td class="px-5 py-3 text-bci-muted">${c.local||'-'}</td>
+                </tr>
+              `).join('') || `<tr><td class="px-5 py-6 text-bci-muted" colspan="7">Sem registos neste filtro.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+        <div class="px-6 py-4 text-[12.5px] text-bci-muted border-t border-bci-line flex items-center justify-between flex-wrap gap-2">
+          <span>Vista: <b>Banqueiro Individual</b> — filtrada para o ID ${user.id_banqueiro}</span>
+          <button id="exportCsv" class="font-semibold text-bci-navy">Exportar CSV</button>
+        </div>
+      </div>
+    `;
+  }
+
+  if(route==='pacotes'){
+    const leques = [
+      { pacote:"Pacote Zungueira Básico", descricao: "Conta à ordem simplificada BCI, sem comissão de manutenção nos primeiros 6 meses. Ideal para começar.", requisitos:"BI válido, 1 fotografia tipo passe, depósito inicial 500 Kz, nº de telefone activo." },
+      { pacote:"Pacote Zungueira Plus", descricao: "Conta à ordem + Cartão Multicaixa Débito imediato. Levantamentos e pagamentos em todo o país.", requisitos:"BI válido, telefone, depósito inicial 1.000 Kz, comprovativo de actividade simples." },
+      { pacote:"Pacote Zungueira Empreendedora", descricao: "Conta + Cartão + adesão ao BCI Mobile e elegibilidade para TPA móvel. Para quem já factura no mercado.", requisitos:"BI válido, NIF, comprovativo de actividade/declaração do mercado, depósito inicial 2.500 Kz." },
+    ];
+    return `
+      <div class="bg-white rounded-[22px] border border-bci-line shadow-card p-6 sm:p-8">
+        <h3 class="text-[24px] font-[800]">Leques do Cliente • Pacotes BCI Zungueira</h3>
+        <p class="text-bci-muted text-[14px] mt-1">Tabela oficial para consulta rápida no terreno.</p>
+        <div class="overflow-auto bci-scroll mt-5 rounded-xl border border-bci-line">
+          <table class="w-full text-[14px]">
+            <thead class="bg-bci-bg text-[11.5px] uppercase tracking-wider text-bci-muted">
+              <tr><th class="text-left px-4 py-3">Pacote</th><th class="text-left px-4 py-3">Descrição</th><th class="text-left px-4 py-3">Requisitos</th></tr>
+            </thead>
+            <tbody>
+              ${leques.map(l=>`
+                <tr class="border-t border-bci-line align-top">
+                  <td class="px-4 py-4 font-[700] text-bci-navy whitespace-nowrap">${l.pacote}</td>
+                  <td class="px-4 py-4 text-[13.7px] text-[#37425c]">${l.descricao}</td>
+                  <td class="px-4 py-4 text-[13.4px] text-bci-muted">${l.requisitos}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  if(route==='sobre'){
+    return `
+      <div class="relative hero-zumba rounded-[26px] overflow-hidden min-h-[230px] flex items-end shadow-card">
+        <div class="relative z-10 p-7 sm:p-10 text-white max-w-2xl">
+          <div class="uppercase tracking-wider text-[11px] font-[700] text-white/80">Sobre • Bankeiros da Zunga</div>
+          <h2 class="font-display text-[38px] sm:text-[46px] leading-[1.05] mt-2">Banca que encontra as pessoas.</h2>
+        </div>
+      </div>
+
+      <div class="grid lg:grid-cols-3 gap-4 mt-5">
+        <div class="bg-white rounded-[20px] border border-bci-line shadow-card p-6 lg:col-span-2">
+          <h4 class="text-[18px] font-[800]">O que é o Projeto Bankeiros da Zunga?</h4>
+          <p class="text-[14.5px] text-[#3d4760] leading-relaxed mt-3">
+            É a iniciativa de inclusão financeira do BCI para levar serviços bancários formais às zungueiras e zungueiros dos mercados informais de Angola. 
+            Banqueiros certificados circulam nos mercados com tablet/telemóvel, abrem contas simplificadas no local, validam a presença por GPS e reportam tudo em tempo real para uma Google Sheet central, auditável pelos Chefes.
+            O projecto reduz barreiras de entrada, aumenta a bancarização e conecta o comércio informal à economia formal.
+          </p>
+        </div>
+        <div class="bg-bci-navy text-white rounded-[20px] p-6 shadow-card">
+          <div class="text-[12px] uppercase tracking-wider font-[700] text-white/70">Métrica do dia</div>
+          <div class="text-[34px] font-[800] mt-1">${DB.read('Contas').filter(c=>c.data===hoje).length}</div>
+          <div class="text-white/80 text-[13.5px]">contas abertas hoje em todo o país</div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-[22px] border border-bci-line shadow-card p-6 sm:p-8 mt-4">
+        <h4 class="text-[19px] font-[800]">Pacote Zungueira</h4>
+        <div class="grid md:grid-cols-2 gap-6 text-[14.2px] text-[#3b455d] leading-relaxed mt-3">
+          <div>
+            <ul class="list-disc ml-5 space-y-2">
+              <li>Conta à ordem simplificada BCI, abertura em menos de 5 minutos no mercado.</li>
+              <li>Isenção de comissão de manutenção nos primeiros 6 meses.</li>
+              <li>Cartão Multicaixa Débito imediato (Pacote Plus / Empreendedora).</li>
+              <li>Adesão ao BCI Mobile / BCI Net, consulta de saldo e transferências.</li>
+              <li>Elegibilidade para TPA móvel – receba pagamentos por cartão no seu bancada.</li>
+            </ul>
+          </div>
+          <div class="bg-bci-bg rounded-[16px] px-5 py-4 border border-bci-line">
+            <div class="font-[800]">Condições de Acesso</div>
+            <ul class="list-disc ml-5 mt-2 space-y-1.5 text-[13.8px]">
+              <li>Ser maior de 18 anos.</li>
+              <li>Bilhete de Identidade válido e em bom estado.</li>
+              <li>Número de telefone activo (para SMS de confirmação).</li>
+              <li>Comprovativo simplificado de actividade / declaração do mercado (para Plus e Empreendedora).</li>
+              <li>Depósito inicial: Básico 500 Kz • Plus 1.000 Kz • Empreendedora 2.500 Kz.</li>
+              <li>1 fotografia tipo passe (pode ser tirada no local).</li>
+              <li>Aceitação dos termos de abertura de conta BCI.</li>
+            </ul>
+          </div>
+        </div>
+        <p class="text-[12.8px] text-bci-muted mt-5">Para suporte: inclusao@bci.ao • Linha Zunga: 923 000 000</p>
+      </div>
+    `;
+  }
+
+  return `<div class="bg-white rounded-[22px] border border-bci-line p-8 shadow-card">Página em construção.</div>`;
+}
+
+function bindBanqueiro(){
+  document.querySelectorAll('#bqNav [data-route]').forEach(b=>{
+    b.onclick = ()=> navigate(b.dataset.route);
+  });
+  document.querySelectorAll('[data-route-go]').forEach(b=>{
+    b.onclick = ()=> navigate(b.dataset.routeGo);
+  });
+  $('#btnLogout').onclick = logout;
+  $('#btnSwitchToChefe').onclick = ()=> { Session.clear(); appMode='chefe'; render(); };
+  $('#btnSheetCfg').onclick = ()=> {
+    $('#sheetModal').classList.remove('hidden');
+    const cfg = DB.getConfig();
+    $('#sheetEndpoint').value = cfg.endpoint || '';
+  };
+  document.querySelectorAll('[data-close-sheet]').forEach(el=> el.onclick = ()=> $('#sheetModal').classList.add('hidden'));
+  $('#saveSheetCfg')?.addEventListener('click', ()=>{
+    DB.saveConfig({ endpoint: $('#sheetEndpoint').value.trim() });
+    toast('Configuração guardada localmente');
+    $('#sheetModal').classList.add('hidden');
+  });
+
+  // Presence buttons
+  const presenceBtns = ['#quickPresenceBtn','#dashPresence'].map(s=>document.querySelector(s)).filter(Boolean);
+  presenceBtns.forEach(btn=> btn.onclick = openPresenceFlow);
+
+  // Conta form
+  const contaForm = $('#contaForm');
+  if(contaForm){
+    contaForm.onsubmit = (e)=>{
+      e.preventDefault();
+      const fd = new FormData(contaForm);
+      const user = Session.get().user;
+      const row = {
+        id: genId('CT'),
+        data: todayISO(),
+        banqueiro_id: user.id_banqueiro,
+        banqueiro_nome: user.nome,
+        cliente_nome: fd.get('cliente_nome'),
+        bi: fd.get('bi'),
+        telefone: fd.get('telefone'),
+        pacote: fd.get('pacote'),
+        status: 'aberta',
+        local: (fd.get('local')||'').split(' – ')[0]
+      };
+      DB.insert('Contas', row);
+      toast('Conta aberta e sincronizada com a Sheet Contas');
+      navigate('contas_abertas');
+    };
+  }
+
+  const exportBtn = $('#exportCsv');
+  if(exportBtn){
+    exportBtn.onclick = ()=>{
+      const rows = DB.read('Contas').filter(c=>c.banqueiro_id === Session.get().user.id_banqueiro);
+      const csv = 'ID,Data,Cliente,BI,Telefone,Pacote,Status\n' + rows.map(r=>[r.id,r.data,r.cliente_nome,r.bi,r.telefone,r.pacote,r.status].join(',')).join('\n');
+      const blob = new Blob([csv], {type:'text/csv'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = 'contas_banqueiro.csv'; a.click();
+    };
+  }
+
+  // mobile sidebar toggle
+  const side = $('#sideMenu');
+  let menuOpen = false;
+  $('#btnOpenMenu').onclick = ()=>{
+    menuOpen = !menuOpen;
+    side.classList.toggle('hidden', false);
+    if(window.innerWidth < 1024){
+      side.style.display = menuOpen ? 'block' : 'none';
+    }
+  };
+  if(window.innerWidth < 1024){
+    side.style.display = 'none';
+  }
+  window.addEventListener('resize', ()=>{
+    if(window.innerWidth >= 1024){ side.style.display = ''; }
+  });
+
+  // update presence quick status
+  refreshPresenceQuick();
+}
+
+function refreshPresenceQuick(){
+  const el = document.getElementById('presenceQuickStatus');
+  if(!el) return;
+  const user = Session.get()?.user;
+  if(!user) return;
+  const pres = DB.read('Presenca').find(p=>p.banqueiro_id===user.id_banqueiro && p.data===todayISO());
+  if(!pres){ el.textContent = 'Ainda não marcada hoje'; return; }
+  el.innerHTML = pres.status==='no_local'
+    ? `<span class="text-emerald-700 font-semibold">Presente em ${pres.local_nome}</span> • entrada ${pres.entrada}${pres.saida ? ' • saída '+pres.saida : ''}`
+    : `<span class="text-red-600 font-semibold">Fora do local</span> • ${pres.local_nome}`;
+}
+
+function openPresenceFlow(){
+  const user = Session.get().user;
+  const existing = DB.read('Presenca').find(p=>p.banqueiro_id === user.id_banqueiro && p.data===todayISO());
+  const modal = document.createElement('div');
+  modal.className = 'fixed inset-0 z-[70] flex items-center justify-center p-4';
+  modal.innerHTML = `
+    <div class="absolute inset-0 bg-bci-navy/55" data-close></div>
+    <div class="relative bg-white rounded-[24px] shadow-soft w-full max-w-[560px] p-6">
+      <div class="text-[20px] font-[800]">Marcar Presença • GPS</div>
+      <p class="text-[13.5px] text-bci-muted mt-1">Vamos validar a sua localização contra os mercados cadastrados na aba <b>Locais</b>. Raio de validação: 100 m.</p>
+      <div id="presenceBox" class="mt-4 rounded-[16px] border border-bci-line bg-bci-bg px-4 py-4 text-[14px]">A obter localização…</div>
+      <div class="flex flex-wrap gap-2 mt-4">
+        <button id="btnDoPresence" class="px-4 py-3 rounded-xl bg-bci-navy text-white font-[700]">Usar minha localização GPS</button>
+        <button id="btnManualPresence" class="px-4 py-3 rounded-xl border border-bci-line font-semibold">Escolher mercado manualmente</button>
+        <button data-close class="px-4 py-3 rounded-xl text-bci-muted font-semibold">Fechar</button>
+      </div>
+      <div id="presenceResult" class="mt-3 text-[13.5px]"></div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  const close = ()=> modal.remove();
+  modal.querySelectorAll('[data-close]').forEach(b=>b.onclick=close);
+
+  const box = modal.querySelector('#presenceBox');
+  const result = modal.querySelector('#presenceResult');
+
+  function setResult(lat, lng, manualLocal=null){
+    const locais = DB.read('Locais');
+    let nearest = null, minDist = Infinity;
+    locais.forEach(l=>{
+      const d = haversine(lat, lng, l.lat, l.lng);
+      if(d < minDist){ minDist = d; nearest = l; }
+    });
+    const within = minDist <= 100;
+    const chosen = manualLocal || nearest;
+    const status = manualLocal ? 'no_local' : (within ? 'no_local' : 'fora_do_local');
+    const statusHtml = status==='no_local'
+      ? `<span class="text-emerald-700 font-[700]">Presente no local correto ✓</span>`
+      : `<span class="text-red-600 font-[700]">Fora do local • ${Math.round(minDist)}m do ${nearest.nome}</span>`;
+    box.innerHTML = `Lat ${lat.toFixed(5)}, Lng ${lng.toFixed(5)}<br><b>${chosen.nome}</b> • ${chosen.provincia}<br>${statusHtml}`;
+    
+    // Save
+    const presList = DB.read('Presenca');
+    const today = todayISO();
+    const idx = presList.findIndex(p=>p.banqueiro_id===user.id_banqueiro && p.data===today);
+    const record = {
+      id: existing?.id || genId('PR'),
+      banqueiro_id: user.id_banqueiro,
+      nome: user.nome,
+      data: today,
+      entrada: existing?.entrada || nowHM(),
+      saida: existing?.saida || '',
+      lat, lng,
+      local_nome: chosen.nome,
+      provincia: chosen.provincia,
+      status
+    };
+    if(idx>=0) { presList[idx] = {...presList[idx], ...record}; DB.write('Presenca', presList); }
+    else DB.insert('Presenca', record);
+
+    result.innerHTML = status==='no_local'
+      ? `<div class="text-emerald-700">Presença registada com sucesso na aba <b>Presenca</b>.</div>
+         <button id="btnMarcarSaida" class="mt-2 px-3 py-2 rounded-lg bg-white border border-bci-line font-semibold text-[13px]">Marcar saída</button>`
+      : `<div class="text-red-600 font-semibold">Alerta enviado aos Chefes: banqueiro fora do local.</div>`;
+    
+    refreshPresenceQuick();
+    const saidaBtn = modal.querySelector('#btnMarcarSaida');
+    if(saidaBtn){
+      saidaBtn.onclick = ()=>{
+        const list = DB.read('Presenca');
+        const i = list.findIndex(p=>p.banqueiro_id===user.id_banqueiro && p.data===today);
+        if(i>=0){ list[i].saida = nowHM(); DB.write('Presenca', list); toast('Saída registada'); result.innerHTML = '<span class="text-bci-muted">Saída registada às '+list[i].saida+'</span>'; refreshPresenceQuick(); }
+      };
+    }
+  }
+
+  modal.querySelector('#btnDoPresence').onclick = ()=>{
+    if(!navigator.geolocation){ box.textContent = 'Geolocalização não suportada.'; return; }
+    box.textContent = 'A obter GPS… permita o acesso.';
+    navigator.geolocation.getCurrentPosition(pos=>{
+      setResult(pos.coords.latitude, pos.coords.longitude);
+    }, err=>{
+      box.innerHTML = 'Não foi possível obter GPS ('+err.message+'). Use a selecção manual.';
+    }, { enableHighAccuracy:true, timeout:9000 });
+  };
+
+  modal.querySelector('#btnManualPresence').onclick = ()=>{
+    const locais = DB.read('Locais');
+    box.innerHTML = `<div class="text-[12.5px] font-semibold text-bci-muted mb-2">Escolha o mercado onde está:</div>
+      <div class="grid sm:grid-cols-2 gap-2">
+      ${locais.map(l=>`<button data-loc="${l.id}" class="px-3 py-2.5 rounded-xl border border-bci-line bg-white text-left hover:border-bci-pink text-[13.5px]"><b>${l.nome}</b><br><span class="text-bci-muted">${l.provincia}</span></button>`).join('')}
+      </div>`;
+    box.querySelectorAll('[data-loc]').forEach(b=>{
+      b.onclick = ()=>{
+        const l = locais.find(x=>x.id===b.dataset.loc);
+        setResult(l.lat+0.00005, l.lng+0.00005, l);
+      };
+    });
+  };
+}
+
+/* =========== CHEFE SHELL =========== */
+function ChefeShell(){
+  const user = Session.get().user;
+  const presencas = DB.read('Presenca').filter(p=>p.data===todayISO());
+  const fora = presencas.filter(p=>p.status==='fora_do_local');
+  return `
+  <div class="min-h-screen bg-[#f4f5f8]">
+    <header class="bg-white border-b border-bci-line sticky top-0 z-40">
+      <div class="max-w-7xl mx-auto px-4 sm:px-7 lg:px-8 h-[68px] flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-[13px] bg-bci-pink flex items-center justify-center font-[800] text-white">BCI</div>
+          <div>
+            <div class="text-[11px] text-bci-muted font-semibold tracking-wider uppercase">Bankeiros da Zunga</div>
+            <div class="text-[14.5px] font-[800] text-bci-navy -mt-0.5">Painel dos Chefes</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <button id="btnBackToBanqueiro" class="hidden sm:inline-flex text-[12.5px] font-semibold px-3.5 py-2 rounded-full border border-bci-line hover:bg-bci-bg">Área dos Banqueiros</button>
+          <div class="text-right hidden sm:block">
+            <div class="text-[12.5px] font-[700]">${user.nome}</div>
+            <div class="text-[11.5px] text-bci-muted">${user.id_chefe} • ${user.area||''}</div>
+          </div>
+          <div class="w-9 h-9 rounded-full bg-[#e9edf7] text-bci-navy font-[800] text-[12px] flex items-center justify-center">${initials(user.nome)}</div>
+          <button id="chefeLogout" class="text-[12.5px] text-bci-muted font-semibold">Sair</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-7 lg:px-8 py-6 lg:py-8">
+      ${fora.length ? `
+        <div class="mb-5 rounded-[16px] bg-[#fff2f3] border border-red-200 px-4 py-3 text-[13.5px] text-[#b11b2d] font-medium flex flex-wrap items-center gap-2">
+          <span class="font-[800]">Alerta de presença:</span>
+          <span>${fora.map(f=>`${f.nome} (${f.local_nome})`).join(' • ')}</span>
+          <span class="opacity-80">— fora do raio de 100m.</span>
+        </div>` : `
+        <div class="mb-5 rounded-[16px] bg-emerald-50 border border-emerald-200 px-4 py-3 text-[13.5px] text-emerald-800">Todos os banqueiros dentro do local correcto hoje. ✓</div>
+      `}
+
+      <div class="grid grid-cols-12 gap-5">
+        <div class="col-span-12 xl:col-span-7">
+          <div class="bg-white rounded-[22px] border border-bci-line shadow-card p-4 sm:p-5">
+            <div class="flex flex-wrap items-end justify-between gap-3 mb-3">
+              <div>
+                <div class="text-[12px] font-bold text-bci-pink uppercase tracking-wider">Mapa em tempo real</div>
+                <div class="text-[18px] font-[800]">Presença dos Banqueiros</div>
+              </div>
+              <div class="flex items-center gap-4 text-[12.5px] text-bci-muted font-semibold">
+                <span class="flex items-center gap-1.5"><i class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></i> No local</span>
+                <span class="flex items-center gap-1.5"><i class="w-3 h-3 rounded-full bg-red-500 inline-block"></i> Fora</span>
+              </div>
+            </div>
+            <div id="chefeMap" style="height:420px; width:100%;"></div>
+          </div>
+        </div>
+
+        <div class="col-span-12 xl:col-span-5 space-y-4">
+          <div class="bg-white rounded-[22px] border border-bci-line shadow-card p-5">
+            <div class="text-[12px] font-bold text-bci-pink uppercase tracking-wider">Estatísticas do dia</div>
+            <div class="grid grid-cols-3 gap-4 mt-3">
+              ${(() => {
+                const contasHoje = DB.read('Contas').filter(c=>c.data===todayISO());
+                return `
+                  <div><div class="text-[28px] font-[800]">${contasHoje.length}</div><div class="text-[12px] text-bci-muted">Contas hoje</div></div>
+                  <div><div class="text-[28px] font-[800]">${presencas.filter(p=>p.status==='no_local').length}</div><div class="text-[12px] text-bci-muted">No local</div></div>
+                  <div><div class="text-[28px] font-[800] text-red-600">${fora.length}</div><div class="text-[12px] text-bci-muted">Fora</div></div>
+                `;
+              })()}
+            </div>
+          </div>
+
+          <div class="bg-white rounded-[22px] border border-bci-line shadow-card p-5">
+            <div class="font-[800] mb-3">Contas por província (hoje)</div>
+            <div id="provBars" class="space-y-2 text-[13px]"></div>
+          </div>
+
+          <div class="bg-white rounded-[22px] border border-bci-line shadow-card p-5">
+            <div class="font-[800] mb-3">Ranking por banqueiro (hoje)</div>
+            <div id="rankList" class="text-[13.5px] space-y-2"></div>
+          </div>
+        </div>
+
+        <div class="col-span-12">
+          <div class="bg-white rounded-[22px] border border-bci-line shadow-card">
+            <div class="px-5 py-4 border-b border-bci-line flex flex-wrap items-center gap-3 justify-between">
+              <div class="font-[800]">Presenças de hoje • aba Presenca</div>
+              <div class="flex flex-wrap items-center gap-2">
+                <select id="fProv" class="rounded-xl border border-bci-line px-3 py-2 text-[13px] bg-white">
+                  <option value="">Todas as províncias</option>
+                  ${[...new Set(DB.read('Locais').map(l=>l.provincia))].map(p=>`<option>${p}</option>`).join('')}
+                </select>
+                <select id="fLocal" class="rounded-xl border border-bci-line px-3 py-2 text-[13px] bg-white min-w-[210px]">
+                  <option value="">Todos os mercados/balcões</option>
+                  ${DB.read('Locais').map(l=>`<option value="${l.nome}">${l.nome} – ${l.provincia}</option>`).join('')}
+                </select>
+                <button id="btnRefreshPres" class="px-3 py-2 rounded-xl border border-bci-line text-[13px] font-semibold">Actualizar</button>
+              </div>
+            </div>
+            <div class="overflow-auto bci-scroll">
+              <table class="w-full text-[13.5px] min-w-[880px]">
+                <thead class="bg-bci-bg text-[11.5px] uppercase tracking-wider text-bci-muted">
+                  <tr>
+                    <th class="text-left px-5 py-3">Banqueiro</th>
+                    <th class="text-left px-5 py-3">ID</th>
+                    <th class="text-left px-5 py-3">Status</th>
+                    <th class="text-left px-5 py-3">Entrada</th>
+                    <th class="text-left px-5 py-3">Saída</th>
+                    <th class="text-left px-5 py-3">Localização</th>
+                    <th class="text-left px-5 py-3">Local</th>
+                  </tr>
+                </thead>
+                <tbody id="presTbody"></tbody>
+              </table>
+            </div>
+            <div class="px-5 py-3 border-t border-bci-line text-[12px] text-bci-muted">Dados puxados da aba <b>Presenca</b> em tempo real. GPS com validação de 100m.</div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="text-center text-[12px] text-bci-muted py-8">Painel dos Chefes • Bankeiros da Zunga • BCI</footer>
+  </div>
+  `;
+}
+
+function bindChefe(){
+  $('#chefeLogout').onclick = logout;
+  $('#btnBackToBanqueiro').onclick = ()=>{ Session.clear(); appMode='banqueiro'; render(); };
+
+  // map
+  setTimeout(()=>{
+    const mapEl = document.getElementById('chefeMap');
+    if(!mapEl) return;
+    const map = L.map('chefeMap', { scrollWheelZoom:false }).setView([-8.8383, 13.2344], 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution:'© OpenStreetMap' }).addTo(map);
+    const pres = DB.read('Presenca').filter(p=>p.data===todayISO());
+    pres.forEach(p=>{
+      const color = p.status==='no_local' ? '#16a34a' : '#ef4444';
+      const m = L.circleMarker([p.lat, p.lng], { radius:9, color:'#fff', weight:3, fillColor: color, fillOpacity:1 }).addTo(map);
+      m.bindPopup(`<b>${p.nome}</b><br>${p.local_nome}<br>${p.status==='no_local' ? 'No local ✓' : 'Fora do local'}<br>Entrada: ${p.entrada} ${p.saida ? ' • Saída: '+p.saida : ''}`);
+    });
+  }, 60);
+
+  // stats
+  const contasHoje = DB.read('Contas').filter(c=>c.data===todayISO());
+  const byProv = {};
+  contasHoje.forEach(c=>{
+    const loc = DB.read('Locais').find(l=> (c.local||'').includes(l.nome));
+    const prov = loc ? loc.provincia : 'Luanda';
+    byProv[prov] = (byProv[prov]||0)+1;
+  });
+  const maxProv = Math.max(1, ...Object.values(byProv));
+  document.getElementById('provBars').innerHTML = Object.entries(byProv).map(([p,v])=>`
+    <div>
+      <div class="flex justify-between"><span>${p}</span><span class="font-[700]">${v}</span></div>
+      <div class="h-2.5 bg-bci-bg rounded-full overflow-hidden"><div style="width:${(v/maxProv*100).toFixed(0)}%" class="h-full bg-bci-pink rounded-full"></div></div>
+    </div>
+  `).join('') || '<span class="text-bci-muted">Sem contas hoje.</span>';
+
+  const byBanq = {};
+  contasHoje.forEach(c=>{ const k = c.banqueiro_nome + ' § ' + c.banqueiro_id; byBanq[k] = (byBanq[k]||0)+1; });
+  const rank = Object.entries(byBanq).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('rankList').innerHTML = rank.map(([k,v],i)=> {
+    const [nome,id] = k.split(' § ');
+    return `<div class="flex items-center justify-between bg-bci-bg rounded-xl px-3 py-2"><div><span class="text-bci-muted mr-2">#${i+1}</span><b>${nome}</b> <span class="text-bci-muted">${id}</span></div><div class="font-[800]">${v}</div></div>`;
+  }).join('') || '<span class="text-bci-muted">Sem movimento hoje.</span>';
+
+  function renderPresTable(){
+    const fp = $('#fProv').value;
+    const fl = $('#fLocal').value;
+    let rows = DB.read('Presenca').filter(p=>p.data===todayISO());
+    if(fp) rows = rows.filter(r=>r.provincia===fp);
+    if(fl) rows = rows.filter(r=>r.local_nome===fl);
+    $('#presTbody').innerHTML = rows.map(p=>`
+      <tr class="border-t border-bci-line">
+        <td class="px-5 py-3 font-semibold">${p.nome}</td>
+        <td class="px-5 py-3 font-mono text-[12.5px]">${p.banqueiro_id}</td>
+        <td class="px-5 py-3">
+          <span class="px-2.5 py-1 rounded-full text-[11.5px] font-[700] ${p.status==='no_local' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}">
+            ${p.status==='no_local' ? 'No local' : 'Fora do local'}
+          </span>
+        </td>
+        <td class="px-5 py-3">${p.entrada}</td>
+        <td class="px-5 py-3">${p.saida || '—'}</td>
+        <td class="px-5 py-3 text-bci-muted text-[12.5px]">${p.lat.toFixed(4)}, ${p.lng.toFixed(4)}</td>
+        <td class="px-5 py-3">${p.local_nome}</td>
+      </tr>
+    `).join('') || `<tr><td colspan="7" class="px-5 py-6 text-bci-muted">Sem registos para este filtro.</td></tr>`;
+  }
+  renderPresTable();
+  $('#fProv').onchange = renderPresTable;
+  $('#fLocal').onchange = renderPresTable;
+  $('#btnRefreshPres').onclick = ()=>{ renderPresTable(); toast('Dados actualizados'); };
+}
+
+/* Init */
+render();
+</script>
+</body>
+</html>

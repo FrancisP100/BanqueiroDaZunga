@@ -1,0 +1,1838 @@
+<!DOCTYPE html>
+<html lang="pt-AO">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bankeiros da Zunga - BCI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Inter', 'system-ui', 'sans-serif'],
+          display: ['Fraunces', 'Georgia', 'serif'],
+          mono: ['JetBrains Mono', 'monospace'],
+        },
+        colors: {
+          bci: {
+            pink: '#E91E63',
+            pinkDark: '#b81550',
+            pinkSoft: '#fdf0f5',
+            gold: '#c9974d',
+            goldSoft: '#fbf5ea',
+            navy: '#0c1830',
+            navy2: '#15244a',
+            navySoft: '#1f3458',
+            ink: '#0f172a',
+            muted: '#64748b',
+            mutedSoft: '#94a3b8',
+            line: '#e7e9f0',
+            lineSoft: '#f0f1f6',
+            bg: '#f5f6fa',
+            admin: '#0c1830',
+            adminAccent: '#c9974d'
+          }
+        },
+        boxShadow: {
+          'soft': '0 8px 32px rgba(12, 24, 48, 0.10)',
+          'card': '0 2px 14px rgba(12, 24, 48, 0.06)',
+          'cardHover': '0 8px 24px rgba(12, 24, 48, 0.10)',
+          'pink': '0 10px 28px rgba(233, 30, 99, 0.24)',
+          'gold': '0 10px 28px rgba(201, 151, 77, 0.28)',
+          'navy': '0 10px 28px rgba(12, 24, 48, 0.30)'
+        }
+      }
+    }
+  }
+</script>
+<style type="text/tailwindcss">
+  body { background:#f5f6fa; color:#0f172a; }
+  .hero-zumba {
+    background-image: linear-gradient(120deg, rgba(12,24,48,0.82), rgba(12,24,48,0.58)), url('https://images.unsplash.com/photo-1547471080-7cc2caa01a7e?q=80&w=2070&auto=format&fit=crop');
+    background-size: cover;
+    background-position: center 35%;
+  }
+  .hero-zumba::before {
+    content:'';
+    position:absolute; inset:0;
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: inherit;
+    pointer-events:none;
+  }
+  .hero-admin {
+    background-image: linear-gradient(125deg, rgba(12,24,48,0.94), rgba(21,36,74,0.88));
+  }
+  .texture-dots {
+    background-image: radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1px);
+    background-size: 18px 18px;
+  }
+  .bci-scroll::-webkit-scrollbar{ width:6px;height:6px }
+  .bci-scroll::-webkit-scrollbar-thumb{ background:#d6dbe6; border-radius:99px }
+  .leaflet-container { border-radius: 18px; font-family: Inter, sans-serif; }
+  .map-marker-green { background:#16a34a; width:14px;height:14px;border-radius:50%; border:3px solid white; box-shadow:0 0 0 4px rgba(22,163,74,.22);}
+  .map-marker-red { background:#ef4444; width:14px;height:14px;border-radius:50%; border:3px solid white; box-shadow:0 0 0 4px rgba(239,68,68,.22);}
+  .card-rise { transition: box-shadow .2s ease, transform .2s ease; }
+  .card-rise:hover { box-shadow: 0 8px 24px rgba(12,24,48,0.10); transform: translateY(-1px); }
+  .stat-num { font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  .badge-dot::before { content:''; display:inline-block; width:6px; height:6px; border-radius:99px; margin-right:6px; background:currentColor; }
+  ::selection { background: rgba(233,30,99,0.18); }
+  input:focus, select:focus, textarea:focus { outline:none; }
+  .scale-tap:active { transform: scale(0.98); }
+</style>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23E91E63'/%3E%3Ctext x='32' y='41' text-anchor='middle' font-family='Inter,Arial,700' font-weight='800' font-size='26' fill='white'%3EBCI%3C/text%3E%3C/svg%3E">
+</head>
+<body class="font-sans antialiased min-h-screen">
+<div id="app"></div>
+
+<!-- Toast -->
+<div id="toast" class="fixed z-[100] bottom-5 left-1/2 -translate-x-1/2 px-4 py-3 rounded-full bg-bci-navy text-white text-sm font-medium shadow-soft opacity-0 pointer-events-none transition-all duration-300"></div>
+
+<script>
+/* ============================
+   BANKEIROS DA ZUNGA - Mock Google Sheets DB
+   Tudo salvo em localStorage, com opção de conectar a SheetDB / Apps Script
+   ============================ */
+
+const SHEET_TABLES = ['Usuarios_Banqueiros','Usuarios_Chefes','Usuarios_Admin','Presenca','Contas','Locais'];
+
+const DEFAULT_DB = {
+  Usuarios_Banqueiros: [
+    { nome: "Ana Silva Domingos", id_banqueiro: "BZ0174", telefone: "923 450 110", provincia: "Luanda", local_id: "L01", ativo: true },
+    { nome: "João Kiala", id_banqueiro: "BZ0142", telefone: "926 881 003", provincia: "Luanda", local_id: "L02", ativo: true },
+    { nome: "Telma Cassinda", id_banqueiro: "BZ0211", telefone: "921 109 442", provincia: "Benguela", local_id: "L05", ativo: true }
+  ],
+  Usuarios_Chefes: [
+    { nome: "Carlos Manuel Vitor", id_chefe: "CH-08", area: "Luanda Sul" },
+    { nome: "Madalena Chimuco", id_chefe: "CH-03", area: "Benguela" }
+  ],
+  Usuarios_Admin: [
+    { nome: "Direcção BCI Inclusão", id_admin: "AD-01", area: "Nacional" }
+  ],
+  Locais: [
+    { id: "L01", nome: "Mercado do 30", tipo:"mercado", balcao:"BCI-0030", provincia: "Luanda", lat: -8.9256, lng: 13.3612, qtd_banqueiros: 1 },
+    { id: "L02", nome: "Mercado do Kikolo", tipo:"mercado", balcao:"BCI-0142", provincia: "Luanda", lat: -8.7865, lng: 13.2847, qtd_banqueiros: 1 },
+    { id: "L03", nome: "Mercado da Mabunda", tipo:"mercado", balcao:"BCI-0211", provincia: "Luanda", lat: -8.8901, lng: 13.2377, qtd_banqueiros: 0 },
+    { id: "L04", nome: "Balcão BCI Viana", tipo:"balcao", balcao:"BCI-0044", provincia: "Luanda", lat: -8.9045, lng: 13.3743, qtd_banqueiros: 0 },
+    { id: "L05", nome: "Mercado 4 de Abril – Rocha", tipo:"mercado", balcao:"BCI-0405", provincia: "Benguela", lat: -12.5763, lng: 13.4035, qtd_banqueiros: 1 },
+    { id: "L06", nome: "Mercado do Benfica", tipo:"mercado", balcao:"BCI-0612", provincia: "Luanda", lat: -9.0271, lng: 13.1614, qtd_banqueiros: 0 },
+    { id: "L07", nome: "Mercado do Huambo Central", tipo:"mercado", balcao:"BCI-0701", provincia: "Huambo", lat: -12.7761, lng: 15.7392, qtd_banqueiros: 0 }
+  ],
+  Contas: [
+    { id: "CT-8214", data: daysAgo(0), banqueiro_id: "BZ0174", banqueiro_nome: "Ana Silva Domingos", cliente_nome: "Rosa Capalo", bi: "002948221LA048", telefone: "945 221 009", pacote: "Pacote Zungueira Plus", status: "aberta", local: "Mercado do 30" },
+    { id: "CT-8213", data: daysAgo(0), banqueiro_id: "BZ0174", banqueiro_nome: "Ana Silva Domingos", cliente_nome: "Esperança Tchitumba", bi: "008421994LA034", telefone: "932 112 880", pacote: "Pacote Zungueira Básico", status: "aberta", local: "Mercado do 30" },
+    { id: "CT-8211", data: daysAgo(0), banqueiro_id: "BZ0142", banqueiro_nome: "João Kiala", cliente_nome: "Madalena Sapalo", bi: "003821990LA012", telefone: "923 774 201", pacote: "Pacote Zungueira Empreendedora", status: "pendente", local: "Mercado do Kikolo" },
+    { id: "CT-8202", data: daysAgo(1), banqueiro_id: "BZ0174", banqueiro_nome: "Ana Silva Domingos", cliente_nome: "Luísa Manuel", bi: "007128882LA041", telefone: "944 002 118", pacote: "Pacote Zungueira Plus", status: "aberta", local: "Mercado do 30" },
+    { id: "CT-8190", data: daysAgo(1), banqueiro_id: "BZ0211", banqueiro_nome: "Telma Cassinda", cliente_nome: "Eunice Calunga", bi: "004449912BE011", telefone: "927 540 001", pacote: "Pacote Zungueira Básico", status: "aberta", local: "Mercado 4 de Abril – Rocha" },
+    { id: "CT-8188", data: daysAgo(2), banqueiro_id: "BZ0142", banqueiro_nome: "João Kiala", cliente_nome: "Domingas Furtado", bi: "009221188LA032", telefone: "933 991 204", pacote: "Pacote Zungueira Plus", status: "aberta", local: "Mercado da Mabunda" },
+  ],
+  Presenca: [
+    { id: "PR-1291", banqueiro_id: "BZ0174", nome: "Ana Silva Domingos", data: todayISO(), entrada: "07:52", saida: "", lat: -8.9254, lng: 13.3615, local_nome: "Mercado do 30", status: "no_local", pontualidade: "no_horario", provincia: "Luanda", origem:"gps" },
+    { id: "PR-1290", banqueiro_id: "BZ0142", nome: "João Kiala", data: todayISO(), entrada: "08:14", saida: "", lat: -8.7868, lng: 13.2849, local_nome: "Mercado do Kikolo", status: "no_local", pontualidade: "atraso", provincia: "Luanda", origem:"gps" },
+    { id: "PR-1289", banqueiro_id: "BZ0211", nome: "Telma Cassinda", data: todayISO(), entrada: "08:40", saida: "", lat: -12.5801, lng: 13.4090, local_nome: "Mercado 4 de Abril – Rocha", status: "fora_do_local", pontualidade: "atraso", provincia: "Benguela", origem:"gps" },
+  ]
+};
+
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function daysAgo(n){ const d=new Date(); d.setDate(d.getDate()-n); return d.toISOString().slice(0,10); }
+
+const DB = {
+  configKey: 'bci_zumba_sheet_config',
+  rulesKey: 'bci_zumba_rules',
+  getConfig(){
+    try { return JSON.parse(localStorage.getItem(this.configKey) || '{}'); } catch { return {}; }
+  },
+  saveConfig(cfg){ localStorage.setItem(this.configKey, JSON.stringify(cfg)); },
+  getRules(){
+    try { return { horaLimite: '08:00', toleranciaMin: 15, ...JSON.parse(localStorage.getItem(this.rulesKey) || '{}') }; }
+    catch { return { horaLimite: '08:00', toleranciaMin: 15 }; }
+  },
+  saveRules(r){ localStorage.setItem(this.rulesKey, JSON.stringify(r)); },
+  init(){
+    SHEET_TABLES.forEach(t => {
+      const key = 'bci_zumba_'+t.toLowerCase();
+      if(!localStorage.getItem(key)){
+        localStorage.setItem(key, JSON.stringify(DEFAULT_DB[t] || []));
+      }
+    });
+  },
+  read(table){
+    return JSON.parse(localStorage.getItem('bci_zumba_'+table.toLowerCase()) || '[]');
+  },
+  write(table, rows){
+    localStorage.setItem('bci_zumba_'+table.toLowerCase(), JSON.stringify(rows));
+  },
+  insert(table, row){
+    const rows = this.read(table);
+    rows.unshift(row);
+    this.write(table, rows);
+    return row;
+  },
+  update(table, matchFn, patch){
+    const rows = this.read(table);
+    const idx = rows.findIndex(matchFn);
+    if(idx > -1){ rows[idx] = {...rows[idx], ...patch}; this.write(table, rows); return rows[idx]; }
+    return null;
+  },
+  remove(table, matchFn){
+    const rows = this.read(table);
+    const next = rows.filter(r=>!matchFn(r));
+    this.write(table, next);
+    return rows.length - next.length;
+  }
+};
+DB.init();
+
+/* Auth / Session */
+const Session = {
+  get(){ try { return JSON.parse(localStorage.getItem('bci_zumba_session')||'null'); } catch { return null } },
+  set(mode, user){ localStorage.setItem('bci_zumba_session', JSON.stringify({mode, user, at: Date.now()})); },
+  clear(){ localStorage.removeItem('bci_zumba_session'); }
+};
+
+/* Utils */
+const $ = sel => document.querySelector(sel);
+function toast(msg){
+  const t = $('#toast');
+  t.textContent = msg;
+  t.style.opacity = '1';
+  t.style.transform = 'translateX(-50%) translateY(-4px)';
+  clearTimeout(toast._tid);
+  toast._tid = setTimeout(()=> { t.style.opacity='0'; t.style.transform='translateX(-50%) translateY(6px)'; }, 2400);
+}
+function fmtDate(iso){ if(!iso) return '-'; const [y,m,d]=iso.split('-'); return `${d}/${m}/${y}`; }
+function nowHM(){ return new Date().toLocaleTimeString('pt-PT',{hour:'2-digit', minute:'2-digit'}); }
+function haversine(lat1, lon1, lat2, lon2){
+  const R=6371e3; const toRad = x=>x*Math.PI/180;
+  const dLat=toRad(lat2-lat1), dLon=toRad(lon2-lon1);
+  const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+function genId(prefix){ return prefix + '-' + Math.floor(8000 + Math.random()*1999); }
+function hmToMinutes(hm){ if(!hm) return null; const [h,m] = hm.split(':').map(Number); return h*60+m; }
+
+/* Pontualidade: compara hora de entrada com a regra (hora limite + tolerância) */
+function calcPontualidade(entradaHM){
+  const rules = DB.getRules();
+  const limite = hmToMinutes(rules.horaLimite) + (Number(rules.toleranciaMin)||0);
+  const entrada = hmToMinutes(entradaHM);
+  if(entrada === null) return 'falta';
+  return entrada <= limite ? 'no_horario' : 'atraso';
+}
+
+/* Gera registos de falta automática: banqueiros activos sem presença hoje após a hora limite */
+function gerarFaltasAutomaticas(){
+  const rules = DB.getRules();
+  const agora = hmToMinutes(nowHM());
+  const limite = hmToMinutes(rules.horaLimite) + (Number(rules.toleranciaMin)||0);
+  if(agora < limite) return; // ainda dentro da janela, não marcar falta
+  const hoje = todayISO();
+  const banqueiros = DB.read('Usuarios_Banqueiros').filter(b=>b.ativo!==false);
+  const presencas = DB.read('Presenca');
+  let alterou = false;
+  banqueiros.forEach(b=>{
+    const existe = presencas.find(p=>p.banqueiro_id===b.id_banqueiro && p.data===hoje);
+    if(!existe){
+      const loc = DB.read('Locais').find(l=>l.id===b.local_id);
+      presencas.unshift({
+        id: genId('PR'),
+        banqueiro_id: b.id_banqueiro,
+        nome: b.nome,
+        data: hoje,
+        entrada: '',
+        saida: '',
+        lat: loc?loc.lat:null, lng: loc?loc.lng:null,
+        local_nome: loc ? loc.nome : (b.provincia||'-'),
+        provincia: b.provincia || (loc?loc.provincia:'-'),
+        status: 'falta',
+        pontualidade: 'falta',
+        origem: 'automatico'
+      });
+      alterou = true;
+    }
+  });
+  if(alterou) DB.write('Presenca', presencas);
+}
+
+/* State / Router */
+let appMode = 'banqueiro'; // 'banqueiro' | 'chefe' | 'admin'
+let route = 'dashboard';
+let session = Session.get();
+
+if(session && session.mode){
+  appMode = session.mode;
+}
+
+function navigate(r){ route = r; render(); }
+function switchAppMode(m){ appMode = m; route = 'dashboard'; render(); }
+function logout(){ Session.clear(); session=null; route='dashboard'; render(); }
+
+const MODE_LABELS = {
+  banqueiro: { label: 'Área dos Banqueiros', idLabel: 'ID do Banqueiro', idField: 'id_banqueiro', table: 'Usuarios_Banqueiros', idPlaceholder: 'Ex: BZ0174' },
+  chefe: { label: 'Painel dos Chefes', idLabel: 'ID do Chefe', idField: 'id_chefe', table: 'Usuarios_Chefes', idPlaceholder: 'Ex: CH-08' },
+  admin: { label: 'Painel de Administração', idLabel: 'ID de Administrador', idField: 'id_admin', table: 'Usuarios_Admin', idPlaceholder: 'Ex: AD-01' },
+};
+
+/* RENDER ROOT */
+function render(){
+  session = Session.get();
+  gerarFaltasAutomaticas();
+  const app = document.getElementById('app');
+  if(!session){
+    app.innerHTML = AuthScreen(appMode);
+    bindAuth();
+    return;
+  }
+  if(session.mode !== appMode){
+    appMode = session.mode;
+  }
+
+  if(appMode === 'banqueiro'){
+    app.innerHTML = BanqueiroShell();
+    bindBanqueiro();
+  } else if(appMode === 'chefe') {
+    app.innerHTML = ChefeShell();
+    bindChefe();
+  } else {
+    app.innerHTML = AdminShell();
+    bindAdmin();
+  }
+}
+
+/* =========== AUTH =========== */
+function AuthScreen(mode){
+  const cfg = MODE_LABELS[mode];
+  const isAdmin = mode === 'admin';
+  return `
+  <div class="min-h-screen bg-[#f7f6f9] flex flex-col">
+    <header class="w-full bg-white border-b border-bci-line">
+      <div class="max-w-6xl mx-auto px-5 sm:px-8 py-4 flex items-center justify-between gap-3 flex-wrap">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-[14px] bg-bci-pink flex items-center justify-center font-extrabold text-white tracking-tight">BCI</div>
+          <div>
+            <div class="text-[11px] text-bci-muted uppercase tracking-wider font-semibold">Banco de Comércio e Indústria</div>
+            <div class="text-[15px] font-[700] text-bci-navy">Bankeiros da Zunga</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 text-[12.5px] font-semibold">
+          <button data-go-mode="banqueiro" class="px-3.5 py-2 rounded-full border ${mode==='banqueiro'?'bg-bci-navy text-white border-bci-navy':'border-bci-line bg-white hover:bg-bci-bg'} transition">Banqueiros</button>
+          <button data-go-mode="chefe" class="px-3.5 py-2 rounded-full border ${mode==='chefe'?'bg-bci-navy text-white border-bci-navy':'border-bci-line bg-white hover:bg-bci-bg'} transition">Chefes</button>
+          <button data-go-mode="admin" class="px-3.5 py-2 rounded-full border ${mode==='admin'?'bg-bci-admin text-white border-bci-admin':'border-bci-line bg-white hover:bg-bci-bg'} transition">Administração</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="flex-1 grid lg:grid-cols-2">
+      <div class="relative ${isAdmin ? 'hero-admin texture-dots' : 'hero-zumba'} min-h-[300px] lg:min-h-full flex items-end overflow-hidden">
+        <div class="relative z-10 p-8 md:p-14 pb-12 text-white max-w-xl">
+          <div class="inline-flex text-[11px] font-semibold tracking-wider uppercase bg-white/12 border border-white/25 rounded-full px-3 py-1.5 mb-5 backdrop-blur">
+            ${isAdmin ? 'Gestão Central • Rede de Mercados' : 'Inclusão Financeira • Angola'}
+          </div>
+          <h1 class="font-display text-[40px] md:text-[52px] leading-[1.0] tracking-tight">
+            ${isAdmin ? 'Visão geral de toda a operação.' : 'Banca onde<br/>a Zunga<br/>acontece.'}
+          </h1>
+          <p class="mt-5 text-white/85 text-[15.5px] leading-relaxed max-w-md">
+            ${isAdmin ? 'Gerir mercados e balcões, utilizadores, regras de presença e auditar a operação completa do programa Bankeiros da Zunga.' : 'Abertura de contas simplificada para vendedoras e vendedores dos mercados informais. No terreno, com GPS, em poucos minutos.'}
+          </p>
+          <div class="flex items-center gap-5 mt-7 text-[13px] text-white/80 flex-wrap">
+            ${isAdmin
+              ? '<span>✓ Gestão de mercados</span><span>✓ Controlo de presença</span><span>✓ Utilizadores</span>'
+              : '<span>✓ GPS validado</span><span>✓ BI + Telefone</span><span>✓ Sheet integrado</span>'}
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white flex items-center justify-center px-6 py-12 md:py-20">
+        <div class="w-full max-w-[420px]">
+          <div class="mb-7">
+            <div class="text-[12px] font-bold ${isAdmin?'text-bci-gold':'text-bci-pink'} uppercase tracking-wider">${cfg.label}</div>
+            <h2 class="text-[28px] font-[800] text-bci-navy mt-1 tracking-tight">Bem-vindo de volta</h2>
+            <p class="text-[14px] text-bci-muted mt-1">Entre com o seu ${cfg.idLabel} ou crie acesso.</p>
+          </div>
+
+          <div class="bg-[#fbfbfc] border border-bci-line rounded-[20px] p-[18px]">
+            <div class="flex bg-white rounded-[14px] border border-bci-line p-1 text-[13.5px] font-semibold">
+              <button data-auth-tab="login" class="auth-tab flex-1 py-2.5 rounded-[10px] bg-bci-navy text-white">Entrar</button>
+              <button data-auth-tab="register" class="auth-tab flex-1 py-2.5 rounded-[10px] text-bci-muted">Criar conta</button>
+            </div>
+
+            <form id="authForm" class="mt-5 space-y-4">
+              <div>
+                <label class="text-[12px] font-semibold text-bci-muted">Nome completo</label>
+                <input id="auth_nome" required class="w-full mt-1.5 rounded-xl border border-bci-line bg-white px-4 py-3.5 text-[15px] outline-none focus:ring-2 focus:ring-bci-pink/25 focus:border-bci-pink" placeholder="${mode==='banqueiro' ? 'Ex: Ana Silva Domingos' : mode==='chefe' ? 'Ex: Carlos Manuel Vitor' : 'Ex: Direcção BCI Inclusão'}" />
+              </div>
+              <div>
+                <label class="text-[12px] font-semibold text-bci-muted">${cfg.idLabel}</label>
+                <input id="auth_id" required class="w-full mt-1.5 rounded-xl border border-bci-line bg-white px-4 py-3.5 text-[15px] outline-none focus:ring-2 focus:ring-bci-pink/25 focus:border-bci-pink" placeholder="${cfg.idPlaceholder}" />
+              </div>
+              <div id="auth_extra" class="hidden">
+                <label class="text-[12px] font-semibold text-bci-muted">Telefone (opcional)</label>
+                <input id="auth_tel" class="w-full mt-1.5 rounded-xl border border-bci-line bg-white px-4 py-3.5 text-[15px] outline-none focus:ring-2 focus:ring-bci-pink/25 focus:border-bci-pink" placeholder="923 000 000" />
+              </div>
+              <button class="w-full rounded-xl ${isAdmin?'bg-bci-admin hover:bg-bci-navy2':'bg-bci-pink hover:bg-bci-pinkDark'} text-white font-[700] py-3.5 ${isAdmin?'shadow-navy':'shadow-pink'} transition" type="submit" id="auth_submit_btn">Entrar na plataforma</button>
+              <p class="text-[11.8px] text-bci-muted text-center leading-relaxed pt-1">Modo demonstração. Os dados ficam guardados localmente e podem ser ligados a uma Google Sheet via SheetDB / Apps Script.</p>
+            </form>
+          </div>
+
+          <div class="mt-5 rounded-[16px] border border-dashed ${isAdmin?'border-amber-200 bg-bci-goldSoft text-[#7a5418]':'border-pink-200 bg-bci-pinkSoft text-[#a3134c]'} px-4 py-3 text-[12.5px]">
+            <b>Dica de teste:</b> ${mode==='banqueiro' ? 'Ana Silva Domingos / BZ0174' : mode==='chefe' ? 'Carlos Manuel Vitor / CH-08' : 'Direcção BCI Inclusão / AD-01'}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="border-t border-bci-line bg-white text-center text-[12px] text-bci-muted py-4">
+      BCI • Bankeiros da Zunga • Inclusão Financeira • Angola 2026
+    </footer>
+  </div>
+  `;
+}
+
+function bindAuth(){
+  document.querySelectorAll('[data-go-mode]').forEach(btn=>{
+    btn.onclick = ()=>{ appMode = btn.dataset.goMode; render(); };
+  });
+  let authMode = 'login';
+  document.querySelectorAll('.auth-tab').forEach(btn=>{
+    btn.onclick = () => {
+      authMode = btn.dataset.authTab;
+      document.querySelectorAll('.auth-tab').forEach(b=>{
+        b.classList.remove('bg-bci-navy','text-white');
+        b.classList.add('text-bci-muted');
+      });
+      btn.classList.add('bg-bci-navy','text-white');
+      btn.classList.remove('text-bci-muted');
+      $('#auth_extra').classList.toggle('hidden', authMode==='login');
+      $('#auth_submit_btn').textContent = authMode==='login' ? 'Entrar na plataforma' : 'Criar conta';
+    }
+  });
+
+  $('#authForm').onsubmit = (e)=>{
+    e.preventDefault();
+    const nome = $('#auth_nome').value.trim();
+    const id = $('#auth_id').value.trim();
+    const tel = ($('#auth_tel')?.value || '').trim();
+    if(!nome || !id){ toast('Preencha nome e ID'); return; }
+    const cfg = MODE_LABELS[appMode];
+    const table = cfg.table;
+    const idField = cfg.idField;
+    const users = DB.read(table);
+    const found = users.find(u => (u.nome||'').toLowerCase() === nome.toLowerCase() && u[idField] === id);
+
+    if(authMode === 'register'){
+      if(found){ toast('Esse utilizador já existe. Faça login.'); return; }
+      if(appMode === 'admin'){ toast('Contas de Administração só podem ser criadas por outro Administrador.'); return; }
+      const newUser = appMode==='banqueiro'
+        ? { nome, id_banqueiro:id, telefone: tel, provincia:"Luanda", ativo:true }
+        : { nome, id_chefe:id, area:"Luanda" };
+      DB.insert(table, newUser);
+      Session.set(appMode, newUser);
+      toast('Conta criada com sucesso!');
+      render();
+      return;
+    } else {
+      if(!found){ toast('Credenciais inválidas. Verifique Nome + ID.'); return; }
+      Session.set(appMode, found);
+      toast('Sessão iniciada');
+      render();
+    }
+  };
+}
+
+function initials(name){
+  return name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+}
+/* =========== BANQUEIRO SHELL =========== */
+function BanqueiroShell(){
+  const user = Session.get().user;
+  return `
+  <div class="min-h-screen">
+    <!-- Topbar -->
+    <header class="sticky top-0 z-40 bg-white/92 backdrop-blur border-b border-bci-line">
+      <div class="max-w-7xl mx-auto px-4 sm:px-7 lg:px-8 h-[66px] flex items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <button id="btnOpenMenu" class="lg:hidden p-2 rounded-xl border border-bci-line">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <div class="w-10 h-10 rounded-[13px] bg-bci-pink flex items-center justify-center font-[800] text-white">BCI</div>
+          <div class="hidden sm:block">
+            <div class="text-[11px] text-bci-muted font-semibold tracking-wider uppercase">Bankeiros da Zunga</div>
+            <div class="text-[14.5px] font-[700] text-bci-navy -mt-0.5">Área dos Banqueiros</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <button id="btnSheetCfg" class="hidden sm:inline-flex text-[12.5px] font-semibold px-3.5 py-2 rounded-full border border-bci-line hover:bg-bci-bg">Google Sheets</button>
+          <button id="btnSwitchToChefe" class="hidden md:inline-flex text-[12.5px] font-semibold px-3.5 py-2 rounded-full bg-bci-navy text-white">Abrir Painel dos Chefes</button>
+          <div class="h-8 w-px bg-bci-line hidden sm:block"></div>
+          <div class="text-right hidden sm:block">
+            <div class="text-[12.5px] font-[700] text-bci-navy">${user.nome}</div>
+            <div class="text-[11.5px] text-bci-muted -mt-0.5">${user.id_banqueiro || user.id_chefe} • ${user.provincia||'Luanda'}</div>
+          </div>
+          <div class="w-9 h-9 rounded-full bg-bci-pinkSoft text-bci-pink font-[800] text-[12px] flex items-center justify-center">${initials(user.nome)}</div>
+          <button id="btnLogout" class="text-[12.5px] text-bci-muted hover:text-bci-navy font-semibold">Sair</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-7 lg:px-8 py-6 lg:py-9 grid grid-cols-12 gap-6 lg:gap-8">
+      <!-- Sidebar -->
+      <aside id="sideMenu" class="col-span-12 lg:col-span-3 xl:col-span-3">
+        <div class="bg-white border border-bci-line rounded-[22px] shadow-card p-3 lg:sticky lg:top-[90px]">
+          <nav class="space-y-1.5 text-[14px] font-semibold" id="bqNav">
+            ${[
+              ['dashboard','Dashboard','Início'],
+              ['abertura','Abertura de conta','Nova conta'],
+              ['fluxo','Fluxo de clientes','Em tempo real'],
+              ['contas_abertas','Contas abertas','Relatório'],
+              ['contas_pendentes','Contas pendentes','A acompanhar'],
+              ['minhas_horas','Minhas Horas','Presença e atrasos'],
+              ['pacotes','Leques do Cliente','Pacotes BCI'],
+              ['sobre','Sobre o Projeto','Zungueira'],
+            ].map(([k,label,sub])=>`
+              <button data-route="${k}" class="w-full text-left px-4 py-3 rounded-[14px] transition flex items-center justify-between ${route===k ? 'bg-bci-navy text-white' : 'hover:bg-bci-bg text-bci-navy'}">
+                <span>${label}</span>
+                <span class="text-[11px] font-medium ${route===k ? 'text-white/70' : 'text-bci-muted'}">${sub}</span>
+              </button>
+            `).join('')}
+          </nav>
+
+          <div class="mt-3 rounded-[16px] bg-bci-pinkSoft border border-pink-100 px-4 py-4">
+            <div class="text-[11px] font-bold text-bci-pink uppercase tracking-wider">Presença GPS</div>
+            <div id="presenceQuickStatus" class="text-[13px] text-[#a3134c] mt-1">Ainda não marcada hoje</div>
+            <button id="quickPresenceBtn" class="mt-3 w-full bg-bci-pink text-white font-[700] rounded-xl py-2.5 text-[13.5px] shadow-pink scale-tap">Marcar presença</button>
+          </div>
+
+          <div class="px-2 pt-4 pb-2 text-[11.5px] text-bci-muted leading-relaxed">
+            Contas sincronizadas com <b>Contas</b>, <b>Presenca</b> e <b>Locais</b> na Google Sheet.
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main -->
+      <main class="col-span-12 lg:col-span-9">
+        ${BanqueiroRouteView()}
+      </main>
+    </div>
+
+    <!-- Sheet config modal -->
+    <div id="sheetModal" class="fixed inset-0 z-50 hidden">
+      <div class="absolute inset-0 bg-bci-navy/45" data-close-sheet></div>
+      <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[92%] max-w-lg bg-white rounded-[22px] shadow-soft p-6">
+        <div class="text-[18px] font-[800]">Conectar Google Sheets</div>
+        <p class="text-[13.5px] text-bci-muted mt-1">Cole aqui a URL da sua API SheetDB ou Google Apps Script. Enquanto não conectar, usamos armazenamento local (que replica a estrutura da Sheet).</p>
+        <label class="block mt-4 text-[12px] font-semibold text-bci-muted">SheetDB / Apps Script Endpoint</label>
+        <input id="sheetEndpoint" class="w-full mt-1.5 rounded-xl border border-bci-line px-4 py-3 text-[14px]" placeholder="https://sheetdb.io/api/v1/xxxx" />
+        <div class="flex gap-2 justify-end mt-4">
+          <button data-close-sheet class="px-4 py-2.5 rounded-xl border border-bci-line font-semibold text-[13.5px]">Fechar</button>
+          <button id="saveSheetCfg" class="px-4 py-2.5 rounded-xl bg-bci-navy text-white font-semibold text-[13.5px]">Guardar</button>
+        </div>
+        <div class="mt-4 text-[12px] text-bci-muted bg-bci-bg rounded-xl px-3 py-3">
+          <b>Abas necessárias:</b> Usuarios_Banqueiros, Usuarios_Chefes, Usuarios_Admin, Presenca, Contas, Locais (nome, balcao, tipo, provincia, lat, lng, qtd_banqueiros).
+        </div>
+      </div>
+    </div>
+  </div>
+  `;
+}
+
+function pontualidadeBadge(p){
+  const map = {
+    no_horario: ['bg-emerald-50 text-emerald-700','No horário'],
+    atraso: ['bg-amber-50 text-amber-700','Atraso'],
+    falta: ['bg-red-50 text-red-600','Falta'],
+  };
+  const [cls,label] = map[p] || ['bg-bci-bg text-bci-muted','—'];
+  return `<span class="px-2.5 py-1 rounded-full text-[11.5px] font-[700] ${cls}">${label}</span>`;
+}
+
+function BanqueiroRouteView(){
+  const user = Session.get().user;
+  const contas = DB.read('Contas');
+  const minhas = contas.filter(c=>c.banqueiro_id === user.id_banqueiro);
+  const hoje = todayISO();
+  const contasHoje = contas.filter(c=>c.data===hoje);
+  const abertas = minhas.filter(c=>c.status==='aberta').length;
+  const pendentes = minhas.filter(c=>c.status==='pendente').length;
+  const presHoje = DB.read('Presenca').find(p=>p.banqueiro_id===user.id_banqueiro && p.data===hoje);
+
+  if(route==='dashboard'){
+    return `
+      <section class="relative hero-zumba rounded-[26px] overflow-hidden min-h-[300px] flex items-end shadow-card">
+        <div class="relative z-10 p-7 sm:p-11 text-white max-w-2xl">
+          <div class="uppercase tracking-wider text-[11px] font-[700] text-white/80">Bem-vindo, Banqueiro da Zumba</div>
+          <h2 class="font-display text-[36px] sm:text-[48px] leading-[1.04] mt-2">Olá, ${user.nome.split(' ')[0]}.<br/>Pronto para o mercado?</h2>
+          <p class="mt-3 text-white/85 max-w-lg text-[14.7px]">Abra contas em poucos minutos, marque presença com GPS e acompanhe o seu fluxo diário, tudo sincronizado com a base central.</p>
+          <div class="flex flex-wrap gap-3 mt-5">
+            <button data-route-go="abertura" class="px-5 py-3 rounded-full bg-bci-pink font-[700] shadow-pink scale-tap">Abrir nova conta</button>
+            <button id="dashPresence" class="px-5 py-3 rounded-full bg-white/10 border border-white/30 font-[700] backdrop-blur scale-tap">Marcar presença GPS</button>
+          </div>
+        </div>
+      </section>
+
+      <div class="grid sm:grid-cols-4 gap-4 mt-5">
+        ${[
+          ['Clientes hoje', contasHoje.length, 'pessoas atendidas'],
+          ['Contas abertas', contas.filter(c=>c.status==='aberta').length, 'aprovadas'],
+          ['Contas pendentes', contas.filter(c=>c.status==='pendente').length, 'a concluir'],
+        ].map(([t,v,s])=>`
+          <div class="bg-white rounded-[20px] border border-bci-line shadow-card px-5 py-5 card-rise">
+            <div class="text-[12.5px] text-bci-muted font-semibold">${t}</div>
+            <div class="text-[34px] font-[800] tracking-tight text-bci-navy stat-num">${v}</div>
+            <div class="text-[12.5px] text-bci-muted">${s}</div>
+          </div>
+        `).join('')}
+        <div class="bg-white rounded-[20px] border border-bci-line shadow-card px-5 py-5 card-rise">
+          <div class="text-[12.5px] text-bci-muted font-semibold">Pontualidade hoje</div>
+          <div class="mt-2">${presHoje ? pontualidadeBadge(presHoje.pontualidade) : '<span class="text-bci-muted text-[13px]">Ainda não marcada</span>'}</div>
+          <div class="text-[12.5px] text-bci-muted mt-1">${presHoje && presHoje.entrada ? 'Entrada às '+presHoje.entrada : ''}</div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-[22px] border border-bci-line shadow-card mt-5">
+        <div class="px-5 sm:px-6 py-4 border-b border-bci-line flex items-center justify-between">
+          <div class="font-[800] text-[16px]">Últimas contas abertas por si</div>
+          <button data-route-go="contas_abertas" class="text-[13px] font-semibold text-bci-pink">Ver todas →</button>
+        </div>
+        <div class="overflow-auto bci-scroll">
+          <table class="w-full text-[13.5px]">
+            <thead class="text-[11.5px] uppercase tracking-wider text-bci-muted bg-bci-bg">
+              <tr><th class="text-left px-5 py-3 font-[700]">Cliente</th><th class="text-left px-5 py-3 font-[700]">BI</th><th class="text-left px-5 py-3 font-[700]">Pacote</th><th class="text-left px-5 py-3 font-[700]">Data</th><th class="text-left px-5 py-3 font-[700]">Status</th></tr>
+            </thead>
+            <tbody>
+              ${minhas.slice(0,5).map(c=>`
+                <tr class="border-t border-bci-line">
+                  <td class="px-5 py-3 font-semibold">${c.cliente_nome}</td>
+                  <td class="px-5 py-3 text-bci-muted">${c.bi}</td>
+                  <td class="px-5 py-3">${c.pacote}</td>
+                  <td class="px-5 py-3">${fmtDate(c.data)}</td>
+                  <td class="px-5 py-3"><span class="px-2.5 py-1 rounded-full text-[11.5px] font-[700] ${c.status==='aberta' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}">${c.status}</span></td>
+                </tr>
+              `).join('') || `<tr><td class="px-5 py-6 text-bci-muted" colspan="5">Ainda sem contas registadas.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  if(route==='abertura'){
+    const locais = DB.read('Locais');
+    return `
+      <div class="bg-white rounded-[22px] border border-bci-line shadow-card p-6 sm:p-8">
+        <div class="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div class="text-[12px] font-bold text-bci-pink uppercase tracking-wider">Banqueiros • Abertura de conta</div>
+            <h3 class="text-[26px] font-[800] tracking-tight mt-1">Abrir nova conta – Pacote Zungueira</h3>
+            <p class="text-[13.8px] text-bci-muted mt-1">Preencha os dados da cliente. O registo vai direto para a aba <b>Contas</b>.</p>
+          </div>
+          <div class="text-[12.5px] text-bci-muted bg-bci-bg rounded-xl px-3 py-2">Tempo médio: 3–5 min</div>
+        </div>
+        <form id="contaForm" class="grid md:grid-cols-2 gap-4 mt-6">
+          <div>
+            <label class="text-[12px] font-semibold text-bci-muted">Nome do cliente</label>
+            <input required name="cliente_nome" class="w-full mt-1.5 rounded-xl border border-bci-line px-4 py-3.5 outline-none focus:ring-2 focus:ring-bci-pink/20 focus:border-bci-pink" placeholder="Nome completo" />
+          </div>
+          <div>
+            <label class="text-[12px] font-semibold text-bci-muted">Nº do BI</label>
+            <input required name="bi" class="w-full mt-1.5 rounded-xl border border-bci-line px-4 py-3.5" placeholder="000000000LA000" />
+          </div>
+          <div>
+            <label class="text-[12px] font-semibold text-bci-muted">Telefone</label>
+            <input required name="telefone" class="w-full mt-1.5 rounded-xl border border-bci-line px-4 py-3.5" placeholder="923 000 000" />
+          </div>
+          <div>
+            <label class="text-[12px] font-semibold text-bci-muted">Tipo de pacote</label>
+            <select name="pacote" class="w-full mt-1.5 rounded-xl border border-bci-line px-4 py-3.5 bg-white">
+              <option>Pacote Zungueira Básico</option>
+              <option>Pacote Zungueira Plus</option>
+              <option>Pacote Zungueira Empreendedora</option>
+            </select>
+          </div>
+          <div class="md:col-span-2">
+            <label class="text-[12px] font-semibold text-bci-muted">Local / Mercado</label>
+            <select name="local" class="w-full mt-1.5 rounded-xl border border-bci-line px-4 py-3.5 bg-white">
+              ${locais.map(l=>`<option>${l.nome} – ${l.provincia}</option>`).join('')}
+            </select>
+          </div>
+          <div class="md:col-span-2 flex items-center gap-3 pt-2">
+            <button class="px-5 py-3.5 rounded-xl bg-bci-pink text-white font-[700] shadow-pink scale-tap">Submeter conta</button>
+            <button type="button" data-route-go="dashboard" class="px-5 py-3.5 rounded-xl border border-bci-line font-semibold">Cancelar</button>
+            <span class="text-[12.5px] text-bci-muted">Será guardado em Contas com status “aberta”.</span>
+          </div>
+        </form>
+      </div>
+    `;
+  }
+
+  if(route==='fluxo'){
+    const contasHojeMine = minhas.filter(c=>c.data===hoje);
+    return `
+      <div class="bg-white rounded-[22px] border border-bci-line shadow-card p-6 sm:p-8">
+        <h3 class="text-[24px] font-[800]">Fluxo de clientes – hoje</h3>
+        <p class="text-bci-muted text-[14px]">Contador actualizado via Sheet <b>Contas</b>.</p>
+        <div class="grid sm:grid-cols-3 gap-4 mt-5">
+          <div class="rounded-[16px] bg-bci-bg px-5 py-4"><div class="text-[12px] text-bci-muted font-semibold">Você hoje</div><div class="text-[30px] font-[800]">${contasHojeMine.length}</div></div>
+          <div class="rounded-[16px] bg-bci-bg px-5 py-4"><div class="text-[12px] text-bci-muted font-semibold">Abertas</div><div class="text-[30px] font-[800]">${contasHojeMine.filter(c=>c.status==='aberta').length}</div></div>
+          <div class="rounded-[16px] bg-bci-bg px-5 py-4"><div class="text-[12px] text-bci-muted font-semibold">Pendentes</div><div class="text-[30px] font-[800]">${contasHojeMine.filter(c=>c.status==='pendente').length}</div></div>
+        </div>
+        <div class="overflow-auto bci-scroll mt-5 rounded-xl border border-bci-line">
+          <table class="w-full text-[13.5px]">
+            <thead class="bg-bci-bg text-[11.5px] uppercase tracking-wider text-bci-muted"><tr>
+              <th class="text-left px-4 py-3">Hora</th><th class="text-left px-4 py-3">Cliente</th><th class="text-left px-4 py-3">Pacote</th><th class="text-left px-4 py-3">Status</th>
+            </tr></thead>
+            <tbody>
+              ${contasHojeMine.map(c=>`<tr class="border-t border-bci-line"><td class="px-4 py-3 text-bci-muted">—</td><td class="px-4 py-3 font-semibold">${c.cliente_nome}</td><td class="px-4 py-3">${c.pacote}</td><td class="px-4 py-3">${c.status}</td></tr>`).join('') || `<tr><td class="px-4 py-5 text-bci-muted" colspan="4">Sem movimento registado hoje.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  if(route==='contas_abertas' || route==='contas_pendentes'){
+    const filtro = route==='contas_abertas' ? 'aberta' : 'pendente';
+    const lista = minhas.filter(c=>c.status===filtro);
+    return `
+      <div class="bg-white rounded-[22px] border border-bci-line shadow-card">
+        <div class="px-6 py-5 border-b border-bci-line flex items-center justify-between">
+          <div>
+            <div class="text-[12px] font-bold text-bci-pink uppercase tracking-wider">Controle • Banqueiro Individual</div>
+            <div class="text-[20px] font-[800]">${filtro === 'aberta' ? 'Contas abertas' : 'Contas pendentes'}</div>
+          </div>
+          <div class="text-[13px] text-bci-muted">${lista.length} registos</div>
+        </div>
+        <div class="overflow-auto bci-scroll">
+          <table class="w-full text-[13.5px] min-w-[720px]">
+            <thead class="text-[11.5px] uppercase tracking-wider text-bci-muted bg-bci-bg">
+              <tr>
+                <th class="px-5 py-3 text-left">ID</th>
+                <th class="px-5 py-3 text-left">Cliente</th>
+                <th class="px-5 py-3 text-left">BI</th>
+                <th class="px-5 py-3 text-left">Telefone</th>
+                <th class="px-5 py-3 text-left">Pacote</th>
+                <th class="px-5 py-3 text-left">Data</th>
+                <th class="px-5 py-3 text-left">Local</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${lista.map(c=>`
+                <tr class="border-t border-bci-line hover:bg-[#fafbff]">
+                  <td class="px-5 py-3 font-mono text-[12.5px]">${c.id}</td>
+                  <td class="px-5 py-3 font-semibold">${c.cliente_nome}</td>
+                  <td class="px-5 py-3 text-bci-muted">${c.bi}</td>
+                  <td class="px-5 py-3">${c.telefone}</td>
+                  <td class="px-5 py-3">${c.pacote}</td>
+                  <td class="px-5 py-3">${fmtDate(c.data)}</td>
+                  <td class="px-5 py-3 text-bci-muted">${c.local||'-'}</td>
+                </tr>
+              `).join('') || `<tr><td class="px-5 py-6 text-bci-muted" colspan="7">Sem registos neste filtro.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+        <div class="px-6 py-4 text-[12.5px] text-bci-muted border-t border-bci-line flex items-center justify-between flex-wrap gap-2">
+          <span>Vista: <b>Banqueiro Individual</b> — filtrada para o ID ${user.id_banqueiro}</span>
+          <button id="exportCsv" class="font-semibold text-bci-navy">Exportar CSV</button>
+        </div>
+      </div>
+    `;
+  }
+
+  if(route==='minhas_horas'){
+    const rules = DB.getRules();
+    const historico = DB.read('Presenca').filter(p=>p.banqueiro_id===user.id_banqueiro).sort((a,b)=> a.data < b.data ? 1 : -1);
+    const totalFaltas = historico.filter(h=>h.pontualidade==='falta').length;
+    const totalAtrasos = historico.filter(h=>h.pontualidade==='atraso').length;
+    const totalOk = historico.filter(h=>h.pontualidade==='no_horario').length;
+    return `
+      <div class="bg-white rounded-[22px] border border-bci-line shadow-card p-6 sm:p-8">
+        <div class="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div class="text-[12px] font-bold text-bci-pink uppercase tracking-wider">Banqueiros • Controlo de Horas</div>
+            <h3 class="text-[24px] font-[800] mt-1">Minhas Horas</h3>
+            <p class="text-[13.8px] text-bci-muted mt-1">Hora limite de entrada: <b>${rules.horaLimite}</b> (tolerância de ${rules.toleranciaMin} min).</p>
+          </div>
+        </div>
+        <div class="grid sm:grid-cols-3 gap-4 mt-6">
+          <div class="rounded-[16px] bg-emerald-50 px-5 py-4 border border-emerald-100"><div class="text-[12px] text-emerald-700 font-semibold">No horário</div><div class="text-[28px] font-[800] text-emerald-700">${totalOk}</div></div>
+          <div class="rounded-[16px] bg-amber-50 px-5 py-4 border border-amber-100"><div class="text-[12px] text-amber-700 font-semibold">Atrasos</div><div class="text-[28px] font-[800] text-amber-700">${totalAtrasos}</div></div>
+          <div class="rounded-[16px] bg-red-50 px-5 py-4 border border-red-100"><div class="text-[12px] text-red-600 font-semibold">Faltas</div><div class="text-[28px] font-[800] text-red-600">${totalFaltas}</div></div>
+        </div>
+        <div class="overflow-auto bci-scroll mt-6 rounded-xl border border-bci-line">
+          <table class="w-full text-[13.5px] min-w-[640px]">
+            <thead class="bg-bci-bg text-[11.5px] uppercase tracking-wider text-bci-muted">
+              <tr><th class="text-left px-4 py-3">Data</th><th class="text-left px-4 py-3">Entrada</th><th class="text-left px-4 py-3">Saída</th><th class="text-left px-4 py-3">Local</th><th class="text-left px-4 py-3">Situação</th></tr>
+            </thead>
+            <tbody>
+              ${historico.map(h=>`
+                <tr class="border-t border-bci-line">
+                  <td class="px-4 py-3">${fmtDate(h.data)}</td>
+                  <td class="px-4 py-3">${h.entrada || '—'}</td>
+                  <td class="px-4 py-3">${h.saida || '—'}</td>
+                  <td class="px-4 py-3 text-bci-muted">${h.local_nome||'-'}</td>
+                  <td class="px-4 py-3">${pontualidadeBadge(h.pontualidade)}</td>
+                </tr>
+              `).join('') || `<tr><td class="px-4 py-6 text-bci-muted" colspan="5">Sem histórico de presença.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  if(route==='pacotes'){
+    const leques = [
+      { pacote:"Pacote Zungueira Básico", descricao: "Conta à ordem simplificada BCI, sem comissão de manutenção nos primeiros 6 meses. Ideal para começar.", requisitos:"BI válido, 1 fotografia tipo passe, depósito inicial 500 Kz, nº de telefone activo." },
+      { pacote:"Pacote Zungueira Plus", descricao: "Conta à ordem + Cartão Multicaixa Débito imediato. Levantamentos e pagamentos em todo o país.", requisitos:"BI válido, telefone, depósito inicial 1.000 Kz, comprovativo de actividade simples." },
+      { pacote:"Pacote Zungueira Empreendedora", descricao: "Conta + Cartão + adesão ao BCI Mobile e elegibilidade para TPA móvel. Para quem já factura no mercado.", requisitos:"BI válido, NIF, comprovativo de actividade/declaração do mercado, depósito inicial 2.500 Kz." },
+    ];
+    return `
+      <div class="bg-white rounded-[22px] border border-bci-line shadow-card p-6 sm:p-8">
+        <h3 class="text-[24px] font-[800]">Leques do Cliente • Pacotes BCI Zungueira</h3>
+        <p class="text-bci-muted text-[14px] mt-1">Tabela oficial para consulta rápida no terreno.</p>
+        <div class="overflow-auto bci-scroll mt-5 rounded-xl border border-bci-line">
+          <table class="w-full text-[14px]">
+            <thead class="bg-bci-bg text-[11.5px] uppercase tracking-wider text-bci-muted">
+              <tr><th class="text-left px-4 py-3">Pacote</th><th class="text-left px-4 py-3">Descrição</th><th class="text-left px-4 py-3">Requisitos</th></tr>
+            </thead>
+            <tbody>
+              ${leques.map(l=>`
+                <tr class="border-t border-bci-line align-top">
+                  <td class="px-4 py-4 font-[700] text-bci-navy whitespace-nowrap">${l.pacote}</td>
+                  <td class="px-4 py-4 text-[13.7px] text-[#37425c]">${l.descricao}</td>
+                  <td class="px-4 py-4 text-[13.4px] text-bci-muted">${l.requisitos}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  if(route==='sobre'){
+    return `
+      <div class="relative hero-zumba rounded-[26px] overflow-hidden min-h-[230px] flex items-end shadow-card">
+        <div class="relative z-10 p-7 sm:p-10 text-white max-w-2xl">
+          <div class="uppercase tracking-wider text-[11px] font-[700] text-white/80">Sobre • Bankeiros da Zunga</div>
+          <h2 class="font-display text-[38px] sm:text-[46px] leading-[1.05] mt-2">Banca que encontra as pessoas.</h2>
+        </div>
+      </div>
+
+      <div class="grid lg:grid-cols-3 gap-4 mt-5">
+        <div class="bg-white rounded-[20px] border border-bci-line shadow-card p-6 lg:col-span-2">
+          <h4 class="text-[18px] font-[800]">O que é o Projeto Bankeiros da Zunga?</h4>
+          <p class="text-[14.5px] text-[#3d4760] leading-relaxed mt-3">
+            É a iniciativa de inclusão financeira do BCI para levar serviços bancários formais às zungueiras e zungueiros dos mercados informais de Angola. 
+            Banqueiros certificados circulam nos mercados com tablet/telemóvel, abrem contas simplificadas no local, validam a presença por GPS e reportam tudo em tempo real para uma Google Sheet central, auditável pelos Chefes e pela Administração.
+            O projecto reduz barreiras de entrada, aumenta a bancarização e conecta o comércio informal à economia formal.
+          </p>
+        </div>
+        <div class="bg-bci-navy text-white rounded-[20px] p-6 shadow-card">
+          <div class="text-[12px] uppercase tracking-wider font-[700] text-white/70">Métrica do dia</div>
+          <div class="text-[34px] font-[800] mt-1">${DB.read('Contas').filter(c=>c.data===hoje).length}</div>
+          <div class="text-white/80 text-[13.5px]">contas abertas hoje em todo o país</div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-[22px] border border-bci-line shadow-card p-6 sm:p-8 mt-4">
+        <h4 class="text-[19px] font-[800]">Pacote Zungueira</h4>
+        <div class="grid md:grid-cols-2 gap-6 text-[14.2px] text-[#3b455d] leading-relaxed mt-3">
+          <div>
+            <ul class="list-disc ml-5 space-y-2">
+              <li>Conta à ordem simplificada BCI, abertura em poucos minutos no mercado.</li>
+              <li>Isenção de comissão de manutenção nos primeiros 6 meses.</li>
+              <li>Cartão Multicaixa Débito imediato (Pacote Plus / Empreendedora).</li>
+              <li>Adesão ao BCI Mobile / BCI Net, consulta de saldo e transferências.</li>
+              <li>Elegibilidade para TPA móvel – receba pagamentos por cartão no seu bancada.</li>
+            </ul>
+          </div>
+          <div class="bg-bci-bg rounded-[16px] px-5 py-4 border border-bci-line">
+            <div class="font-[800]">Condições de Acesso</div>
+            <ul class="list-disc ml-5 mt-2 space-y-1.5 text-[13.8px]">
+              <li>Ser maior de 18 anos.</li>
+              <li>Bilhete de Identidade válido e em bom estado.</li>
+              <li>Número de telefone activo (para SMS de confirmação).</li>
+              <li>Comprovativo simplificado de actividade / declaração do mercado (para Plus e Empreendedora).</li>
+              <li>Depósito inicial: Básico 500 Kz • Plus 1.000 Kz • Empreendedora 2.500 Kz.</li>
+              <li>1 fotografia tipo passe (pode ser tirada no local).</li>
+              <li>Aceitação dos termos de abertura de conta BCI.</li>
+            </ul>
+          </div>
+        </div>
+        <p class="text-[12.8px] text-bci-muted mt-5">Para suporte: inclusao@bci.ao • Linha Zunga: 923 000 000</p>
+      </div>
+    `;
+  }
+
+  return `<div class="bg-white rounded-[22px] border border-bci-line p-8 shadow-card">Página em construção.</div>`;
+}
+
+function bindBanqueiro(){
+  document.querySelectorAll('#bqNav [data-route]').forEach(b=>{
+    b.onclick = ()=> navigate(b.dataset.route);
+  });
+  document.querySelectorAll('[data-route-go]').forEach(b=>{
+    b.onclick = ()=> navigate(b.dataset.routeGo);
+  });
+  $('#btnLogout').onclick = logout;
+  $('#btnSwitchToChefe').onclick = ()=> { Session.clear(); appMode='chefe'; render(); };
+  $('#btnSheetCfg').onclick = ()=> {
+    $('#sheetModal').classList.remove('hidden');
+    const cfg = DB.getConfig();
+    $('#sheetEndpoint').value = cfg.endpoint || '';
+  };
+  document.querySelectorAll('[data-close-sheet]').forEach(el=> el.onclick = ()=> $('#sheetModal').classList.add('hidden'));
+  $('#saveSheetCfg')?.addEventListener('click', ()=>{
+    DB.saveConfig({ endpoint: $('#sheetEndpoint').value.trim() });
+    toast('Configuração guardada localmente');
+    $('#sheetModal').classList.add('hidden');
+  });
+
+  // Presence buttons
+  const presenceBtns = ['#quickPresenceBtn','#dashPresence'].map(s=>document.querySelector(s)).filter(Boolean);
+  presenceBtns.forEach(btn=> btn.onclick = openPresenceFlow);
+
+  // Conta form
+  const contaForm = $('#contaForm');
+  if(contaForm){
+    contaForm.onsubmit = (e)=>{
+      e.preventDefault();
+      const fd = new FormData(contaForm);
+      const user = Session.get().user;
+      const row = {
+        id: genId('CT'),
+        data: todayISO(),
+        banqueiro_id: user.id_banqueiro,
+        banqueiro_nome: user.nome,
+        cliente_nome: fd.get('cliente_nome'),
+        bi: fd.get('bi'),
+        telefone: fd.get('telefone'),
+        pacote: fd.get('pacote'),
+        status: 'aberta',
+        local: (fd.get('local')||'').split(' – ')[0]
+      };
+      DB.insert('Contas', row);
+      toast('Conta aberta e sincronizada com a Sheet Contas');
+      navigate('contas_abertas');
+    };
+  }
+
+  const exportBtn = $('#exportCsv');
+  if(exportBtn){
+    exportBtn.onclick = ()=>{
+      const rows = DB.read('Contas').filter(c=>c.banqueiro_id === Session.get().user.id_banqueiro);
+      const csv = 'ID,Data,Cliente,BI,Telefone,Pacote,Status\n' + rows.map(r=>[r.id,r.data,r.cliente_nome,r.bi,r.telefone,r.pacote,r.status].join(',')).join('\n');
+      const blob = new Blob([csv], {type:'text/csv'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = 'contas_banqueiro.csv'; a.click();
+    };
+  }
+
+  // mobile sidebar toggle
+  const side = $('#sideMenu');
+  let menuOpen = false;
+  $('#btnOpenMenu').onclick = ()=>{
+    menuOpen = !menuOpen;
+    side.classList.toggle('hidden', false);
+    if(window.innerWidth < 1024){
+      side.style.display = menuOpen ? 'block' : 'none';
+    }
+  };
+  if(window.innerWidth < 1024){
+    side.style.display = 'none';
+  }
+  window.addEventListener('resize', ()=>{
+    if(window.innerWidth >= 1024){ side.style.display = ''; }
+  });
+
+  // update presence quick status
+  refreshPresenceQuick();
+}
+
+function refreshPresenceQuick(){
+  const el = document.getElementById('presenceQuickStatus');
+  if(!el) return;
+  const user = Session.get()?.user;
+  if(!user) return;
+  const pres = DB.read('Presenca').find(p=>p.banqueiro_id===user.id_banqueiro && p.data===todayISO());
+  if(!pres || !pres.entrada){ el.textContent = 'Ainda não marcada hoje'; return; }
+  el.innerHTML = pres.status==='no_local'
+    ? `<span class="text-emerald-700 font-semibold">Presente em ${pres.local_nome}</span> • entrada ${pres.entrada}${pres.saida ? ' • saída '+pres.saida : ''}`
+    : `<span class="text-red-600 font-semibold">Fora do local</span> • ${pres.local_nome}`;
+}
+
+function openPresenceFlow(){
+  const user = Session.get().user;
+  const existing = DB.read('Presenca').find(p=>p.banqueiro_id === user.id_banqueiro && p.data===todayISO());
+  const modal = document.createElement('div');
+  modal.className = 'fixed inset-0 z-[70] flex items-center justify-center p-4';
+  modal.innerHTML = `
+    <div class="absolute inset-0 bg-bci-navy/55" data-close></div>
+    <div class="relative bg-white rounded-[24px] shadow-soft w-full max-w-[560px] p-6">
+      <div class="text-[20px] font-[800]">Marcar Presença • GPS</div>
+      <p class="text-[13.5px] text-bci-muted mt-1">Vamos validar a sua localização contra os mercados cadastrados na aba <b>Locais</b>. Raio de validação: 100 m. Hora limite: <b>${DB.getRules().horaLimite}</b>.</p>
+      <div id="presenceBox" class="mt-4 rounded-[16px] border border-bci-line bg-bci-bg px-4 py-4 text-[14px]">A obter localização…</div>
+      <div class="flex flex-wrap gap-2 mt-4">
+        <button id="btnDoPresence" class="px-4 py-3 rounded-xl bg-bci-navy text-white font-[700] scale-tap">Usar minha localização GPS</button>
+        <button id="btnManualPresence" class="px-4 py-3 rounded-xl border border-bci-line font-semibold scale-tap">Escolher mercado manualmente</button>
+        <button data-close class="px-4 py-3 rounded-xl text-bci-muted font-semibold">Fechar</button>
+      </div>
+      <div id="presenceResult" class="mt-3 text-[13.5px]"></div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  const close = ()=> modal.remove();
+  modal.querySelectorAll('[data-close]').forEach(b=>b.onclick=close);
+
+  const box = modal.querySelector('#presenceBox');
+  const result = modal.querySelector('#presenceResult');
+
+  function setResult(lat, lng, manualLocal=null){
+    const locais = DB.read('Locais');
+    let nearest = null, minDist = Infinity;
+    locais.forEach(l=>{
+      const d = haversine(lat, lng, l.lat, l.lng);
+      if(d < minDist){ minDist = d; nearest = l; }
+    });
+    const within = minDist <= 100;
+    const chosen = manualLocal || nearest;
+    const status = manualLocal ? 'no_local' : (within ? 'no_local' : 'fora_do_local');
+    const statusHtml = status==='no_local'
+      ? `<span class="text-emerald-700 font-[700]">Presente no local correto ✓</span>`
+      : `<span class="text-red-600 font-[700]">Fora do local • ${Math.round(minDist)}m do ${nearest.nome}</span>`;
+    box.innerHTML = `Lat ${lat.toFixed(5)}, Lng ${lng.toFixed(5)}<br><b>${chosen.nome}</b> • ${chosen.provincia}<br>${statusHtml}`;
+
+    const entradaHora = existing?.entrada || nowHM();
+    const pontualidade = calcPontualidade(entradaHora);
+
+    // Save
+    const presList = DB.read('Presenca');
+    const today = todayISO();
+    const idx = presList.findIndex(p=>p.banqueiro_id===user.id_banqueiro && p.data===today);
+    const record = {
+      id: existing?.id || genId('PR'),
+      banqueiro_id: user.id_banqueiro,
+      nome: user.nome,
+      data: today,
+      entrada: entradaHora,
+      saida: existing?.saida || '',
+      lat, lng,
+      local_nome: chosen.nome,
+      provincia: chosen.provincia,
+      status,
+      pontualidade,
+      origem: 'gps'
+    };
+    if(idx>=0) { presList[idx] = {...presList[idx], ...record}; DB.write('Presenca', presList); }
+    else DB.insert('Presenca', record);
+
+    const pontBadge = pontualidade==='atraso' ? '<span class="text-amber-600 font-semibold">Registo com atraso.</span>' : '<span class="text-emerald-700 font-semibold">Registo dentro do horário.</span>';
+    result.innerHTML = status==='no_local'
+      ? `<div class="text-emerald-700">Presença registada com sucesso na aba <b>Presenca</b>.</div><div class="mt-1">${pontBadge}</div>
+         <button id="btnMarcarSaida" class="mt-2 px-3 py-2 rounded-lg bg-white border border-bci-line font-semibold text-[13px]">Marcar saída</button>`
+      : `<div class="text-red-600 font-semibold">Alerta enviado aos Chefes e Administração: banqueiro fora do local.</div><div class="mt-1">${pontBadge}</div>`;
+
+    refreshPresenceQuick();
+    const saidaBtn = modal.querySelector('#btnMarcarSaida');
+    if(saidaBtn){
+      saidaBtn.onclick = ()=>{
+        const list = DB.read('Presenca');
+        const i = list.findIndex(p=>p.banqueiro_id===user.id_banqueiro && p.data===today);
+        if(i>=0){ list[i].saida = nowHM(); DB.write('Presenca', list); toast('Saída registada'); result.innerHTML = '<span class="text-bci-muted">Saída registada às '+list[i].saida+'</span>'; refreshPresenceQuick(); }
+      };
+    }
+  }
+
+  modal.querySelector('#btnDoPresence').onclick = ()=>{
+    if(!navigator.geolocation){ box.textContent = 'Geolocalização não suportada.'; return; }
+    box.textContent = 'A obter GPS… permita o acesso.';
+    navigator.geolocation.getCurrentPosition(pos=>{
+      setResult(pos.coords.latitude, pos.coords.longitude);
+    }, err=>{
+      box.innerHTML = 'Não foi possível obter GPS ('+err.message+'). Use a selecção manual.';
+    }, { enableHighAccuracy:true, timeout:9000 });
+  };
+
+  modal.querySelector('#btnManualPresence').onclick = ()=>{
+    const locais = DB.read('Locais');
+    box.innerHTML = `<div class="text-[12.5px] font-semibold text-bci-muted mb-2">Escolha o mercado onde está:</div>
+      <div class="grid sm:grid-cols-2 gap-2">
+      ${locais.map(l=>`<button data-loc="${l.id}" class="px-3 py-2.5 rounded-xl border border-bci-line bg-white text-left hover:border-bci-pink text-[13.5px]"><b>${l.nome}</b><br><span class="text-bci-muted">${l.provincia}</span></button>`).join('')}
+      </div>`;
+    box.querySelectorAll('[data-loc]').forEach(b=>{
+      b.onclick = ()=>{
+        const l = locais.find(x=>x.id===b.dataset.loc);
+        setResult(l.lat+0.00005, l.lng+0.00005, l);
+      };
+    });
+  };
+}
+/* =========== CHEFE SHELL =========== */
+function ChefeShell(){
+  const user = Session.get().user;
+  const presencas = DB.read('Presenca').filter(p=>p.data===todayISO());
+  const fora = presencas.filter(p=>p.status==='fora_do_local');
+  const faltas = presencas.filter(p=>p.pontualidade==='falta');
+  const atrasos = presencas.filter(p=>p.pontualidade==='atraso');
+  return `
+  <div class="min-h-screen bg-[#f4f5f8]">
+    <header class="bg-white border-b border-bci-line sticky top-0 z-40">
+      <div class="max-w-7xl mx-auto px-4 sm:px-7 lg:px-8 h-[68px] flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-[13px] bg-bci-pink flex items-center justify-center font-[800] text-white">BCI</div>
+          <div>
+            <div class="text-[11px] text-bci-muted font-semibold tracking-wider uppercase">Bankeiros da Zunga</div>
+            <div class="text-[14.5px] font-[800] text-bci-navy -mt-0.5">Painel dos Chefes</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <button id="btnOpenAdminFromChefe" class="hidden md:inline-flex text-[12.5px] font-semibold px-3.5 py-2 rounded-full bg-bci-admin text-white">Painel de Administração</button>
+          <button id="btnBackToBanqueiro" class="hidden sm:inline-flex text-[12.5px] font-semibold px-3.5 py-2 rounded-full border border-bci-line hover:bg-bci-bg">Área dos Banqueiros</button>
+          <div class="text-right hidden sm:block">
+            <div class="text-[12.5px] font-[700]">${user.nome}</div>
+            <div class="text-[11.5px] text-bci-muted">${user.id_chefe} • ${user.area||''}</div>
+          </div>
+          <div class="w-9 h-9 rounded-full bg-[#e9edf7] text-bci-navy font-[800] text-[12px] flex items-center justify-center">${initials(user.nome)}</div>
+          <button id="chefeLogout" class="text-[12.5px] text-bci-muted font-semibold">Sair</button>
+        </div>
+      </div>
+      <div class="max-w-7xl mx-auto px-4 sm:px-7 lg:px-8 flex gap-1.5 pb-2 overflow-x-auto bci-scroll">
+        ${[
+          ['visao','Visão geral'],
+          ['horas','Horas • Faltas e Atrasos'],
+          ['mercados','Mercados e Balcões'],
+        ].map(([k,label])=>`
+          <button data-chefe-tab="${k}" class="chefe-tab px-3.5 py-2 rounded-full text-[12.5px] font-semibold whitespace-nowrap ${chefeTab===k ? 'bg-bci-navy text-white' : 'text-bci-muted hover:bg-bci-bg'}">${label}</button>
+        `).join('')}
+      </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-7 lg:px-8 py-6 lg:py-8">
+      ${chefeTab==='visao' ? ChefeVisaoGeral(presencas, fora) : ''}
+      ${chefeTab==='horas' ? ChefeHoras(presencas, faltas, atrasos) : ''}
+      ${chefeTab==='mercados' ? PainelMercados('chefe') : ''}
+    </main>
+
+    <footer class="text-center text-[12px] text-bci-muted py-8">Painel dos Chefes • Bankeiros da Zunga • BCI</footer>
+  </div>
+  `;
+}
+
+function ChefeVisaoGeral(presencas, fora){
+  return `
+      ${fora.length ? `
+        <div class="mb-5 rounded-[16px] bg-[#fff2f3] border border-red-200 px-4 py-3 text-[13.5px] text-[#b11b2d] font-medium flex flex-wrap items-center gap-2">
+          <span class="font-[800]">Alerta de presença:</span>
+          <span>${fora.map(f=>`${f.nome} (${f.local_nome})`).join(' • ')}</span>
+          <span class="opacity-80">— fora do raio de 100m.</span>
+        </div>` : `
+        <div class="mb-5 rounded-[16px] bg-emerald-50 border border-emerald-200 px-4 py-3 text-[13.5px] text-emerald-800">Todos os banqueiros dentro do local correcto hoje. ✓</div>
+      `}
+
+      <div class="grid grid-cols-12 gap-5">
+        <div class="col-span-12 xl:col-span-7">
+          <div class="bg-white rounded-[22px] border border-bci-line shadow-card p-4 sm:p-5">
+            <div class="flex flex-wrap items-end justify-between gap-3 mb-3">
+              <div>
+                <div class="text-[12px] font-bold text-bci-pink uppercase tracking-wider">Mapa em tempo real</div>
+                <div class="text-[18px] font-[800]">Presença dos Banqueiros</div>
+              </div>
+              <div class="flex items-center gap-4 text-[12.5px] text-bci-muted font-semibold">
+                <span class="flex items-center gap-1.5"><i class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></i> No local</span>
+                <span class="flex items-center gap-1.5"><i class="w-3 h-3 rounded-full bg-red-500 inline-block"></i> Fora</span>
+              </div>
+            </div>
+            <div id="chefeMap" style="height:420px; width:100%;"></div>
+          </div>
+        </div>
+
+        <div class="col-span-12 xl:col-span-5 space-y-4">
+          <div class="bg-white rounded-[22px] border border-bci-line shadow-card p-5">
+            <div class="text-[12px] font-bold text-bci-pink uppercase tracking-wider">Estatísticas do dia</div>
+            <div class="grid grid-cols-3 gap-4 mt-3">
+              ${(() => {
+                const contasHoje = DB.read('Contas').filter(c=>c.data===todayISO());
+                return `
+                  <div><div class="text-[28px] font-[800]">${contasHoje.length}</div><div class="text-[12px] text-bci-muted">Contas hoje</div></div>
+                  <div><div class="text-[28px] font-[800]">${presencas.filter(p=>p.status==='no_local').length}</div><div class="text-[12px] text-bci-muted">No local</div></div>
+                  <div><div class="text-[28px] font-[800] text-red-600">${fora.length}</div><div class="text-[12px] text-bci-muted">Fora</div></div>
+                `;
+              })()}
+            </div>
+          </div>
+
+          <div class="bg-white rounded-[22px] border border-bci-line shadow-card p-5">
+            <div class="font-[800] mb-3">Contas por província (hoje)</div>
+            <div id="provBars" class="space-y-2 text-[13px]"></div>
+          </div>
+
+          <div class="bg-white rounded-[22px] border border-bci-line shadow-card p-5">
+            <div class="font-[800] mb-3">Ranking por banqueiro (hoje)</div>
+            <div id="rankList" class="text-[13.5px] space-y-2"></div>
+          </div>
+        </div>
+
+        <div class="col-span-12">
+          <div class="bg-white rounded-[22px] border border-bci-line shadow-card">
+            <div class="px-5 py-4 border-b border-bci-line flex flex-wrap items-center gap-3 justify-between">
+              <div class="font-[800]">Presenças de hoje • aba Presenca</div>
+              <div class="flex flex-wrap items-center gap-2">
+                <select id="fProv" class="rounded-xl border border-bci-line px-3 py-2 text-[13px] bg-white">
+                  <option value="">Todas as províncias</option>
+                  ${[...new Set(DB.read('Locais').map(l=>l.provincia))].map(p=>`<option>${p}</option>`).join('')}
+                </select>
+                <select id="fLocal" class="rounded-xl border border-bci-line px-3 py-2 text-[13px] bg-white min-w-[210px]">
+                  <option value="">Todos os mercados/balcões</option>
+                  ${DB.read('Locais').map(l=>`<option value="${l.nome}">${l.nome} – ${l.provincia}</option>`).join('')}
+                </select>
+                <button id="btnRefreshPres" class="px-3 py-2 rounded-xl border border-bci-line text-[13px] font-semibold">Actualizar</button>
+              </div>
+            </div>
+            <div class="overflow-auto bci-scroll">
+              <table class="w-full text-[13.5px] min-w-[880px]">
+                <thead class="bg-bci-bg text-[11.5px] uppercase tracking-wider text-bci-muted">
+                  <tr>
+                    <th class="text-left px-5 py-3">Banqueiro</th>
+                    <th class="text-left px-5 py-3">ID</th>
+                    <th class="text-left px-5 py-3">Status</th>
+                    <th class="text-left px-5 py-3">Entrada</th>
+                    <th class="text-left px-5 py-3">Saída</th>
+                    <th class="text-left px-5 py-3">Localização</th>
+                    <th class="text-left px-5 py-3">Local</th>
+                  </tr>
+                </thead>
+                <tbody id="presTbody"></tbody>
+              </table>
+            </div>
+            <div class="px-5 py-3 border-t border-bci-line text-[12px] text-bci-muted">Dados puxados da aba <b>Presenca</b> em tempo real. GPS com validação de 100m.</div>
+          </div>
+        </div>
+      </div>
+  `;
+}
+
+function ChefeHoras(presencas, faltas, atrasos){
+  const rules = DB.getRules();
+  const banqueiros = DB.read('Usuarios_Banqueiros');
+  return `
+    <div class="grid sm:grid-cols-3 gap-4 mb-5">
+      <div class="bg-white rounded-[20px] border border-bci-line shadow-card px-5 py-5">
+        <div class="text-[12.5px] text-bci-muted font-semibold">Regra de pontualidade</div>
+        <div class="text-[22px] font-[800] mt-1">${rules.horaLimite} <span class="text-[13px] font-[600] text-bci-muted">+ ${rules.toleranciaMin} min</span></div>
+        <div class="text-[12.5px] text-bci-muted">tolerância antes de marcar atraso</div>
+      </div>
+      <div class="bg-amber-50 rounded-[20px] border border-amber-100 px-5 py-5">
+        <div class="text-[12.5px] text-amber-700 font-semibold">Atrasos hoje</div>
+        <div class="text-[28px] font-[800] text-amber-700">${atrasos.length}</div>
+      </div>
+      <div class="bg-red-50 rounded-[20px] border border-red-100 px-5 py-5">
+        <div class="text-[12.5px] text-red-600 font-semibold">Faltas hoje</div>
+        <div class="text-[28px] font-[800] text-red-600">${faltas.length}</div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-[22px] border border-bci-line shadow-card">
+      <div class="px-5 py-4 border-b border-bci-line flex flex-wrap items-center justify-between gap-2">
+        <div class="font-[800]">Presença, faltas e atrasos • hoje</div>
+        <button id="btnMarcarFaltaManual" class="px-3.5 py-2 rounded-xl bg-bci-navy text-white text-[12.5px] font-semibold scale-tap">+ Marcar falta/atraso manual</button>
+      </div>
+      <div class="overflow-auto bci-scroll">
+        <table class="w-full text-[13.5px] min-w-[760px]">
+          <thead class="bg-bci-bg text-[11.5px] uppercase tracking-wider text-bci-muted">
+            <tr>
+              <th class="text-left px-5 py-3">Banqueiro</th>
+              <th class="text-left px-5 py-3">ID</th>
+              <th class="text-left px-5 py-3">Entrada</th>
+              <th class="text-left px-5 py-3">Situação</th>
+              <th class="text-left px-5 py-3">Local</th>
+              <th class="text-left px-5 py-3">Origem</th>
+              <th class="text-right px-5 py-3">Acção</th>
+            </tr>
+          </thead>
+          <tbody id="horasTbody">
+            ${banqueiros.map(b=>{
+              const p = presencas.find(x=>x.banqueiro_id===b.id_banqueiro);
+              return `
+                <tr class="border-t border-bci-line" data-banqueiro-row="${b.id_banqueiro}">
+                  <td class="px-5 py-3 font-semibold">${b.nome}</td>
+                  <td class="px-5 py-3 font-mono text-[12.5px]">${b.id_banqueiro}</td>
+                  <td class="px-5 py-3">${p?.entrada || '—'}</td>
+                  <td class="px-5 py-3">${pontualidadeBadge(p ? p.pontualidade : 'falta')}</td>
+                  <td class="px-5 py-3 text-bci-muted">${p?.local_nome || '-'}</td>
+                  <td class="px-5 py-3 text-bci-muted text-[12px] capitalize">${p?.origem || '—'}</td>
+                  <td class="px-5 py-3 text-right">
+                    <button data-correct-banqueiro="${b.id_banqueiro}" class="text-bci-pink font-semibold text-[12.5px]">Corrigir</button>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div class="px-5 py-3 border-t border-bci-line text-[12px] text-bci-muted">Faltas são marcadas automaticamente após ${rules.horaLimite} + ${rules.toleranciaMin} min sem registo de presença. O Chefe pode corrigir manualmente a qualquer momento.</div>
+    </div>
+
+    <div class="bg-white rounded-[22px] border border-bci-line shadow-card p-5 sm:p-6 mt-5">
+      <div class="font-[800] mb-1">Configurar regra de pontualidade</div>
+      <p class="text-[12.8px] text-bci-muted mb-4">Define a hora limite de entrada e a tolerância (em minutos) usada para calcular atrasos e faltas automáticas.</p>
+      <form id="rulesForm" class="flex flex-wrap items-end gap-3">
+        <div>
+          <label class="text-[12px] font-semibold text-bci-muted">Hora limite</label>
+          <input type="time" name="horaLimite" value="${rules.horaLimite}" class="block mt-1.5 rounded-xl border border-bci-line px-3.5 py-2.5 text-[14px]" />
+        </div>
+        <div>
+          <label class="text-[12px] font-semibold text-bci-muted">Tolerância (min)</label>
+          <input type="number" min="0" max="120" name="toleranciaMin" value="${rules.toleranciaMin}" class="block mt-1.5 rounded-xl border border-bci-line px-3.5 py-2.5 text-[14px] w-28" />
+        </div>
+        <button class="px-4 py-2.5 rounded-xl bg-bci-navy text-white font-semibold text-[13px] scale-tap">Guardar regra</button>
+      </form>
+    </div>
+  `;
+}
+
+function CorrigirPresencaModal(banqueiroId){
+  const b = DB.read('Usuarios_Banqueiros').find(x=>x.id_banqueiro===banqueiroId);
+  const hoje = todayISO();
+  const existing = DB.read('Presenca').find(p=>p.banqueiro_id===banqueiroId && p.data===hoje);
+  const locais = DB.read('Locais');
+  const modal = document.createElement('div');
+  modal.className = 'fixed inset-0 z-[70] flex items-center justify-center p-4';
+  modal.innerHTML = `
+    <div class="absolute inset-0 bg-bci-navy/55" data-close></div>
+    <div class="relative bg-white rounded-[24px] shadow-soft w-full max-w-[520px] p-6">
+      <div class="text-[18px] font-[800]">Corrigir presença • ${b ? b.nome : banqueiroId}</div>
+      <p class="text-[13px] text-bci-muted mt-1">Ajuste manual da situação de hoje. Esta acção fica registada como correcção do Chefe.</p>
+      <form id="correctForm" class="space-y-4 mt-4">
+        <div>
+          <label class="text-[12px] font-semibold text-bci-muted">Situação</label>
+          <select name="pontualidade" class="w-full mt-1.5 rounded-xl border border-bci-line px-4 py-3 bg-white">
+            <option value="no_horario" ${existing?.pontualidade==='no_horario'?'selected':''}>No horário</option>
+            <option value="atraso" ${existing?.pontualidade==='atraso'?'selected':''}>Atraso</option>
+            <option value="falta" ${(!existing || existing?.pontualidade==='falta')?'selected':''}>Falta</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-[12px] font-semibold text-bci-muted">Hora de entrada (se aplicável)</label>
+          <input type="time" name="entrada" value="${existing?.entrada||''}" class="w-full mt-1.5 rounded-xl border border-bci-line px-4 py-3" />
+        </div>
+        <div>
+          <label class="text-[12px] font-semibold text-bci-muted">Local</label>
+          <select name="local" class="w-full mt-1.5 rounded-xl border border-bci-line px-4 py-3 bg-white">
+            ${locais.map(l=>`<option value="${l.id}" ${existing?.local_nome===l.nome?'selected':''}>${l.nome} – ${l.provincia}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="text-[12px] font-semibold text-bci-muted">Observação (opcional)</label>
+          <input name="obs" value="${existing?.obs||''}" class="w-full mt-1.5 rounded-xl border border-bci-line px-4 py-3" placeholder="Ex: justificação apresentada" />
+        </div>
+        <div class="flex gap-2 justify-end pt-1">
+          <button type="button" data-close class="px-4 py-2.5 rounded-xl border border-bci-line font-semibold text-[13.5px]">Cancelar</button>
+          <button class="px-4 py-2.5 rounded-xl bg-bci-navy text-white font-semibold text-[13.5px]">Guardar correcção</button>
+        </div>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  const close = ()=> modal.remove();
+  modal.querySelectorAll('[data-close]').forEach(el=>el.onclick=close);
+
+  modal.querySelector('#correctForm').onsubmit = (e)=>{
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const pontualidade = fd.get('pontualidade');
+    const entrada = fd.get('entrada') || '';
+    const localId = fd.get('local');
+    const loc = locais.find(l=>l.id===localId);
+    const list = DB.read('Presenca');
+    const idx = list.findIndex(p=>p.banqueiro_id===banqueiroId && p.data===hoje);
+    const record = {
+      id: existing?.id || genId('PR'),
+      banqueiro_id: banqueiroId,
+      nome: b ? b.nome : banqueiroId,
+      data: hoje,
+      entrada: pontualidade==='falta' ? '' : entrada,
+      saida: existing?.saida || '',
+      lat: loc?loc.lat:existing?.lat, lng: loc?loc.lng:existing?.lng,
+      local_nome: loc ? loc.nome : existing?.local_nome,
+      provincia: loc ? loc.provincia : existing?.provincia,
+      status: pontualidade==='falta' ? 'falta' : 'no_local',
+      pontualidade,
+      origem: 'correcao_chefe',
+      obs: fd.get('obs')||''
+    };
+    if(idx>=0){ list[idx] = {...list[idx], ...record}; DB.write('Presenca', list); }
+    else DB.insert('Presenca', record);
+    toast('Presença corrigida com sucesso');
+    close();
+    render();
+  };
+}
+
+let chefeTab = 'visao';
+
+function bindChefe(){
+  $('#chefeLogout').onclick = logout;
+  $('#btnBackToBanqueiro').onclick = ()=>{ Session.clear(); appMode='banqueiro'; route='dashboard'; render(); };
+  $('#btnOpenAdminFromChefe').onclick = ()=>{ Session.clear(); appMode='admin'; route='dashboard'; render(); };
+
+  document.querySelectorAll('.chefe-tab').forEach(b=>{
+    b.onclick = ()=>{ chefeTab = b.dataset.chefeTab; render(); };
+  });
+
+  if(chefeTab==='visao'){
+    bindChefeVisaoGeral();
+  }
+  if(chefeTab==='horas'){
+    bindChefeHoras();
+  }
+  if(chefeTab==='mercados'){
+    bindPainelMercados('chefe');
+  }
+}
+
+function bindChefeVisaoGeral(){
+  // map
+  setTimeout(()=>{
+    const mapEl = document.getElementById('chefeMap');
+    if(!mapEl) return;
+    const map = L.map('chefeMap', { scrollWheelZoom:false }).setView([-8.8383, 13.2344], 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution:'© OpenStreetMap' }).addTo(map);
+    const pres = DB.read('Presenca').filter(p=>p.data===todayISO() && p.lat && p.lng);
+    pres.forEach(p=>{
+      const color = p.status==='no_local' ? '#16a34a' : '#ef4444';
+      const m = L.circleMarker([p.lat, p.lng], { radius:9, color:'#fff', weight:3, fillColor: color, fillOpacity:1 }).addTo(map);
+      m.bindPopup(`<b>${p.nome}</b><br>${p.local_nome}<br>${p.status==='no_local' ? 'No local ✓' : 'Fora do local'}<br>Entrada: ${p.entrada||'—'} ${p.saida ? ' • Saída: '+p.saida : ''}`);
+    });
+  }, 60);
+
+  // stats
+  const hoje = todayISO();
+  const contasHoje = DB.read('Contas').filter(c=>c.data===hoje);
+  const byProv = {};
+  contasHoje.forEach(c=>{
+    const loc = DB.read('Locais').find(l=> (c.local||'').includes(l.nome));
+    const prov = loc ? loc.provincia : 'Luanda';
+    byProv[prov] = (byProv[prov]||0)+1;
+  });
+  const maxProv = Math.max(1, ...Object.values(byProv));
+  document.getElementById('provBars').innerHTML = Object.entries(byProv).map(([p,v])=>`
+    <div>
+      <div class="flex justify-between"><span>${p}</span><span class="font-[700]">${v}</span></div>
+      <div class="h-2.5 bg-bci-bg rounded-full overflow-hidden"><div style="width:${(v/maxProv*100).toFixed(0)}%" class="h-full bg-bci-pink rounded-full"></div></div>
+    </div>
+  `).join('') || '<span class="text-bci-muted">Sem contas hoje.</span>';
+
+  const byBanq = {};
+  contasHoje.forEach(c=>{ const k = c.banqueiro_nome + ' § ' + c.banqueiro_id; byBanq[k] = (byBanq[k]||0)+1; });
+  const rank = Object.entries(byBanq).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('rankList').innerHTML = rank.map(([k,v],i)=> {
+    const [nome,id] = k.split(' § ');
+    return `<div class="flex items-center justify-between bg-bci-bg rounded-xl px-3 py-2"><div><span class="text-bci-muted mr-2">#${i+1}</span><b>${nome}</b> <span class="text-bci-muted">${id}</span></div><div class="font-[800]">${v}</div></div>`;
+  }).join('') || '<span class="text-bci-muted">Sem movimento hoje.</span>';
+
+  function renderPresTable(){
+    const fp = $('#fProv').value;
+    const fl = $('#fLocal').value;
+    let rows = DB.read('Presenca').filter(p=>p.data===todayISO());
+    if(fp) rows = rows.filter(r=>r.provincia===fp);
+    if(fl) rows = rows.filter(r=>r.local_nome===fl);
+    $('#presTbody').innerHTML = rows.map(p=>`
+      <tr class="border-t border-bci-line">
+        <td class="px-5 py-3 font-semibold">${p.nome}</td>
+        <td class="px-5 py-3 font-mono text-[12.5px]">${p.banqueiro_id}</td>
+        <td class="px-5 py-3">
+          <span class="px-2.5 py-1 rounded-full text-[11.5px] font-[700] ${p.status==='no_local' ? 'bg-emerald-50 text-emerald-700' : p.status==='falta' ? 'bg-red-50 text-red-600' : 'bg-red-50 text-red-600'}">
+            ${p.status==='no_local' ? 'No local' : p.status==='falta' ? 'Falta' : 'Fora do local'}
+          </span>
+        </td>
+        <td class="px-5 py-3">${p.entrada || '—'}</td>
+        <td class="px-5 py-3">${p.saida || '—'}</td>
+        <td class="px-5 py-3 text-bci-muted text-[12.5px]">${p.lat ? p.lat.toFixed(4)+', '+p.lng.toFixed(4) : '—'}</td>
+        <td class="px-5 py-3">${p.local_nome}</td>
+      </tr>
+    `).join('') || `<tr><td colspan="7" class="px-5 py-6 text-bci-muted">Sem registos para este filtro.</td></tr>`;
+  }
+  renderPresTable();
+  $('#fProv').onchange = renderPresTable;
+  $('#fLocal').onchange = renderPresTable;
+  $('#btnRefreshPres').onclick = ()=>{ renderPresTable(); toast('Dados actualizados'); };
+}
+
+function bindChefeHoras(){
+  document.querySelectorAll('[data-correct-banqueiro]').forEach(btn=>{
+    btn.onclick = ()=> CorrigirPresencaModal(btn.dataset.correctBanqueiro);
+  });
+  $('#btnMarcarFaltaManual').onclick = ()=>{
+    const banqueiros = DB.read('Usuarios_Banqueiros');
+    if(!banqueiros.length){ toast('Sem banqueiros cadastrados'); return; }
+    CorrigirPresencaModal(banqueiros[0].id_banqueiro);
+  };
+  $('#rulesForm').onsubmit = (e)=>{
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    DB.saveRules({ horaLimite: fd.get('horaLimite'), toleranciaMin: Number(fd.get('toleranciaMin')) });
+    toast('Regra de pontualidade actualizada');
+    render();
+  };
+}
+/* =========== PAINEL DE MERCADOS (partilhado: Chefe vê/lista, Admin gere por completo) =========== */
+function PainelMercados(contexto){
+  const locais = DB.read('Locais');
+  const isAdmin = contexto === 'admin';
+  return `
+    <div class="bg-white rounded-[22px] border border-bci-line shadow-card p-5 sm:p-6 mb-5">
+      <div class="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <div class="text-[12px] font-bold ${isAdmin?'text-bci-gold':'text-bci-pink'} uppercase tracking-wider">Mercados e Balcões</div>
+          <h3 class="text-[22px] font-[800] mt-1">Rede de Mercados • aba Locais</h3>
+          <p class="text-[13.5px] text-bci-muted mt-1">${locais.length} pontos cadastrados em ${[...new Set(locais.map(l=>l.provincia))].length} províncias.</p>
+        </div>
+        ${isAdmin ? `<button id="btnNovoMercado" class="px-4 py-3 rounded-xl bg-bci-admin text-white font-[700] text-[13.5px] shadow-navy scale-tap">+ Cadastrar novo mercado</button>` : ''}
+      </div>
+    </div>
+
+    ${isAdmin ? `
+    <div id="mercadoFormWrap" class="hidden bg-white rounded-[22px] border border-bci-line shadow-card p-5 sm:p-6 mb-5">
+      <div class="font-[800] text-[16px] mb-1">Cadastrar novo mercado / balcão</div>
+      <p class="text-[12.8px] text-bci-muted mb-4">Estes dados sincronizam com a aba <b>Locais</b> e ficam disponíveis para marcação de presença GPS e abertura de contas.</p>
+      <form id="mercadoForm" class="grid md:grid-cols-2 gap-4">
+        <div>
+          <label class="text-[12px] font-semibold text-bci-muted">Nome do mercado / balcão</label>
+          <input required name="nome" class="w-full mt-1.5 rounded-xl border border-bci-line px-4 py-3" placeholder="Ex: Mercado do Cassenda" />
+        </div>
+        <div>
+          <label class="text-[12px] font-semibold text-bci-muted">Nº do balcão</label>
+          <input required name="balcao" class="w-full mt-1.5 rounded-xl border border-bci-line px-4 py-3" placeholder="Ex: BCI-0512" />
+        </div>
+        <div>
+          <label class="text-[12px] font-semibold text-bci-muted">Província</label>
+          <select name="provincia" class="w-full mt-1.5 rounded-xl border border-bci-line px-4 py-3 bg-white">
+            ${["Luanda","Benguela","Huambo","Huíla","Bié","Cabinda","Cuanza Norte","Cuanza Sul","Cunene","Lunda Norte","Lunda Sul","Malanje","Moxico","Namibe","Uíge","Zaire","Bengo","Cuando Cubango","Moxico Leste","Cuanza Sul"].map(p=>`<option>${p}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="text-[12px] font-semibold text-bci-muted">Tipo</label>
+          <select name="tipo" class="w-full mt-1.5 rounded-xl border border-bci-line px-4 py-3 bg-white">
+            <option value="mercado">Mercado</option>
+            <option value="balcao">Balcão BCI</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-[12px] font-semibold text-bci-muted">Quantidade de banqueiros</label>
+          <input required type="number" min="0" name="qtd_banqueiros" value="1" class="w-full mt-1.5 rounded-xl border border-bci-line px-4 py-3" />
+        </div>
+        <div>
+          <label class="text-[12px] font-semibold text-bci-muted">Latitude</label>
+          <input required type="number" step="any" name="lat" class="w-full mt-1.5 rounded-xl border border-bci-line px-4 py-3" placeholder="-8.8383" />
+        </div>
+        <div>
+          <label class="text-[12px] font-semibold text-bci-muted">Longitude</label>
+          <input required type="number" step="any" name="lng" class="w-full mt-1.5 rounded-xl border border-bci-line px-4 py-3" placeholder="13.2344" />
+        </div>
+        <div class="flex items-end">
+          <button type="button" id="btnUsarMinhaLoc" class="px-4 py-3 rounded-xl border border-bci-line font-semibold text-[13px] w-full">Usar localização actual (GPS)</button>
+        </div>
+        <div class="md:col-span-2 flex items-center gap-3 pt-2">
+          <button class="px-5 py-3 rounded-xl bg-bci-admin text-white font-[700] scale-tap">Guardar mercado</button>
+          <button type="button" id="btnCancelarMercado" class="px-5 py-3 rounded-xl border border-bci-line font-semibold">Cancelar</button>
+        </div>
+      </form>
+    </div>
+    ` : ''}
+
+    <div class="bg-white rounded-[22px] border border-bci-line shadow-card">
+      <div class="px-5 py-4 border-b border-bci-line flex flex-wrap items-center justify-between gap-2">
+        <div class="font-[800]">Lista de mercados e balcões</div>
+        <select id="mercadoFiltroProv" class="rounded-xl border border-bci-line px-3 py-2 text-[13px] bg-white">
+          <option value="">Todas as províncias</option>
+          ${[...new Set(locais.map(l=>l.provincia))].map(p=>`<option>${p}</option>`).join('')}
+        </select>
+      </div>
+      <div class="overflow-auto bci-scroll">
+        <table class="w-full text-[13.5px] min-w-[760px]">
+          <thead class="bg-bci-bg text-[11.5px] uppercase tracking-wider text-bci-muted">
+            <tr>
+              <th class="text-left px-5 py-3">Nome</th>
+              <th class="text-left px-5 py-3">Nº balcão</th>
+              <th class="text-left px-5 py-3">Tipo</th>
+              <th class="text-left px-5 py-3">Província</th>
+              <th class="text-left px-5 py-3">Banqueiros</th>
+              <th class="text-left px-5 py-3">Coordenadas</th>
+              ${isAdmin ? '<th class="text-right px-5 py-3">Acção</th>' : ''}
+            </tr>
+          </thead>
+          <tbody id="mercadosTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function renderMercadosTable(contexto){
+  const isAdmin = contexto === 'admin';
+  const filtro = document.getElementById('mercadoFiltroProv')?.value || '';
+  let locais = DB.read('Locais');
+  if(filtro) locais = locais.filter(l=>l.provincia===filtro);
+  const tbody = document.getElementById('mercadosTbody');
+  if(!tbody) return;
+  tbody.innerHTML = locais.map(l=>`
+    <tr class="border-t border-bci-line">
+      <td class="px-5 py-3 font-semibold">${l.nome}</td>
+      <td class="px-5 py-3 font-mono text-[12.5px]">${l.balcao || '—'}</td>
+      <td class="px-5 py-3 capitalize">${l.tipo || 'mercado'}</td>
+      <td class="px-5 py-3 text-bci-muted">${l.provincia}</td>
+      <td class="px-5 py-3">${l.qtd_banqueiros ?? 0}</td>
+      <td class="px-5 py-3 text-bci-muted text-[12.5px]">${l.lat?.toFixed(4)}, ${l.lng?.toFixed(4)}</td>
+      ${isAdmin ? `<td class="px-5 py-3 text-right"><button data-del-mercado="${l.id}" class="text-red-600 font-semibold text-[12.5px]">Remover</button></td>` : ''}
+    </tr>
+  `).join('') || `<tr><td colspan="${isAdmin?7:6}" class="px-5 py-6 text-bci-muted">Nenhum mercado cadastrado para este filtro.</td></tr>`;
+
+  if(isAdmin){
+    tbody.querySelectorAll('[data-del-mercado]').forEach(btn=>{
+      btn.onclick = ()=>{
+        if(!confirm('Remover este mercado/balcão da lista?')) return;
+        DB.remove('Locais', l=>l.id===btn.dataset.delMercado);
+        toast('Mercado removido');
+        renderMercadosTable(contexto);
+      };
+    });
+  }
+}
+
+function bindPainelMercados(contexto){
+  renderMercadosTable(contexto);
+  document.getElementById('mercadoFiltroProv')?.addEventListener('change', ()=> renderMercadosTable(contexto));
+
+  if(contexto !== 'admin') return;
+
+  const wrap = document.getElementById('mercadoFormWrap');
+  $('#btnNovoMercado').onclick = ()=>{
+    wrap.classList.toggle('hidden');
+    wrap.scrollIntoView({behavior:'smooth', block:'nearest'});
+  };
+  $('#btnCancelarMercado').onclick = ()=>{ wrap.classList.add('hidden'); };
+
+  $('#btnUsarMinhaLoc').onclick = ()=>{
+    if(!navigator.geolocation){ toast('Geolocalização não suportada'); return; }
+    navigator.geolocation.getCurrentPosition(pos=>{
+      document.querySelector('input[name="lat"]').value = pos.coords.latitude.toFixed(6);
+      document.querySelector('input[name="lng"]').value = pos.coords.longitude.toFixed(6);
+      toast('Coordenadas preenchidas');
+    }, ()=> toast('Não foi possível obter GPS'));
+  };
+
+  $('#mercadoForm').onsubmit = (e)=>{
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const row = {
+      id: 'L' + String(Date.now()).slice(-6),
+      nome: fd.get('nome'),
+      balcao: fd.get('balcao'),
+      tipo: fd.get('tipo'),
+      provincia: fd.get('provincia'),
+      qtd_banqueiros: Number(fd.get('qtd_banqueiros'))||0,
+      lat: Number(fd.get('lat')),
+      lng: Number(fd.get('lng')),
+    };
+    DB.insert('Locais', row);
+    toast('Mercado cadastrado e sincronizado com a Sheet Locais');
+    e.target.reset();
+    document.getElementById('mercadoFormWrap').classList.add('hidden');
+    renderMercadosTable('admin');
+  };
+}
+
+/* =========== ADMIN SHELL =========== */
+let adminTab = 'visao';
+
+function AdminShell(){
+  const user = Session.get().user;
+  return `
+  <div class="min-h-screen bg-[#f3f4f8]">
+    <header class="bg-bci-admin text-white sticky top-0 z-40">
+      <div class="max-w-7xl mx-auto px-4 sm:px-7 lg:px-8 h-[68px] flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-[13px] bg-bci-gold flex items-center justify-center font-[800] text-bci-admin">BCI</div>
+          <div>
+            <div class="text-[11px] text-white/60 font-semibold tracking-wider uppercase">Bankeiros da Zunga</div>
+            <div class="text-[14.5px] font-[800] -mt-0.5">Painel de Administração</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <button id="btnAdminOpenChefe" class="hidden md:inline-flex text-[12.5px] font-semibold px-3.5 py-2 rounded-full bg-white/10 border border-white/20 hover:bg-white/20">Painel dos Chefes</button>
+          <button id="btnAdminOpenBanqueiro" class="hidden sm:inline-flex text-[12.5px] font-semibold px-3.5 py-2 rounded-full bg-white/10 border border-white/20 hover:bg-white/20">Área dos Banqueiros</button>
+          <div class="text-right hidden sm:block">
+            <div class="text-[12.5px] font-[700]">${user.nome}</div>
+            <div class="text-[11.5px] text-white/60">${user.id_admin} • ${user.area||'Nacional'}</div>
+          </div>
+          <div class="w-9 h-9 rounded-full bg-bci-gold text-bci-admin font-[800] text-[12px] flex items-center justify-center">${initials(user.nome)}</div>
+          <button id="adminLogout" class="text-[12.5px] text-white/70 hover:text-white font-semibold">Sair</button>
+        </div>
+      </div>
+      <div class="max-w-7xl mx-auto px-4 sm:px-7 lg:px-8 flex gap-1.5 pb-2 overflow-x-auto bci-scroll">
+        ${[
+          ['visao','Visão geral'],
+          ['mercados','Mercados e Balcões'],
+          ['horas','Horas • Faltas e Atrasos'],
+          ['utilizadores','Utilizadores'],
+        ].map(([k,label])=>`
+          <button data-admin-tab="${k}" class="admin-tab px-3.5 py-2 rounded-full text-[12.5px] font-semibold whitespace-nowrap ${adminTab===k ? 'bg-bci-gold text-bci-admin' : 'text-white/70 hover:bg-white/10'}">${label}</button>
+        `).join('')}
+      </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-7 lg:px-8 py-6 lg:py-8">
+      ${adminTab==='visao' ? AdminVisaoGeral() : ''}
+      ${adminTab==='mercados' ? PainelMercados('admin') : ''}
+      ${adminTab==='horas' ? ChefeHoras(DB.read('Presenca').filter(p=>p.data===todayISO()), DB.read('Presenca').filter(p=>p.data===todayISO() && p.pontualidade==='falta'), DB.read('Presenca').filter(p=>p.data===todayISO() && p.pontualidade==='atraso')) : ''}
+      ${adminTab==='utilizadores' ? AdminUtilizadores() : ''}
+    </main>
+
+    <footer class="text-center text-[12px] text-bci-muted py-8">Painel de Administração • Bankeiros da Zunga • BCI</footer>
+  </div>
+  `;
+}
+
+function AdminVisaoGeral(){
+  const hoje = todayISO();
+  const banqueiros = DB.read('Usuarios_Banqueiros');
+  const chefes = DB.read('Usuarios_Chefes');
+  const locais = DB.read('Locais');
+  const contasHoje = DB.read('Contas').filter(c=>c.data===hoje);
+  const presHoje = DB.read('Presenca').filter(p=>p.data===hoje);
+  const faltas = presHoje.filter(p=>p.pontualidade==='falta').length;
+  const atrasos = presHoje.filter(p=>p.pontualidade==='atraso').length;
+
+  return `
+    <div class="relative hero-admin texture-dots rounded-[26px] overflow-hidden min-h-[200px] flex items-end shadow-card mb-5">
+      <div class="relative z-10 p-7 sm:p-10 text-white max-w-2xl">
+        <div class="uppercase tracking-wider text-[11px] font-[700] text-white/70">Visão geral • Toda a rede</div>
+        <h2 class="font-display text-[32px] sm:text-[40px] leading-[1.05] mt-2">Operação Bankeiros da Zunga.</h2>
+        <p class="mt-2 text-white/80 text-[14px]">${banqueiros.length} banqueiros • ${chefes.length} chefes • ${locais.length} mercados/balcões.</p>
+      </div>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      ${[
+        ['Banqueiros activos', banqueiros.filter(b=>b.ativo!==false).length],
+        ['Mercados/Balcões', locais.length],
+        ['Contas hoje', contasHoje.length],
+        ['Atrasos hoje', atrasos],
+        ['Faltas hoje', faltas],
+      ].map(([t,v])=>`
+        <div class="bg-white rounded-[20px] border border-bci-line shadow-card px-5 py-5 card-rise">
+          <div class="text-[12.5px] text-bci-muted font-semibold">${t}</div>
+          <div class="text-[30px] font-[800] tracking-tight text-bci-navy stat-num">${v}</div>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-5 mt-5">
+      <div class="bg-white rounded-[22px] border border-bci-line shadow-card p-5">
+        <div class="font-[800] mb-3">Mercados por província</div>
+        <div class="space-y-2 text-[13px]">
+          ${(() => {
+            const byProv = {};
+            locais.forEach(l=>{ byProv[l.provincia] = (byProv[l.provincia]||0)+1; });
+            const max = Math.max(1, ...Object.values(byProv));
+            return Object.entries(byProv).map(([p,v])=>`
+              <div>
+                <div class="flex justify-between"><span>${p}</span><span class="font-[700]">${v}</span></div>
+                <div class="h-2.5 bg-bci-bg rounded-full overflow-hidden"><div style="width:${(v/max*100).toFixed(0)}%" class="h-full bg-bci-gold rounded-full"></div></div>
+              </div>
+            `).join('') || '<span class="text-bci-muted">Sem mercados cadastrados.</span>';
+          })()}
+        </div>
+      </div>
+      <div class="bg-white rounded-[22px] border border-bci-line shadow-card p-5">
+        <div class="font-[800] mb-3">Banqueiros com falta ou atraso hoje</div>
+        <div class="space-y-2 text-[13.5px]">
+          ${presHoje.filter(p=>p.pontualidade!=='no_horario').map(p=>`
+            <div class="flex items-center justify-between bg-bci-bg rounded-xl px-3 py-2">
+              <div><b>${p.nome}</b> <span class="text-bci-muted">${p.banqueiro_id}</span></div>
+              ${pontualidadeBadge(p.pontualidade)}
+            </div>
+          `).join('') || '<span class="text-bci-muted">Sem ocorrências hoje. ✓</span>'}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function AdminUtilizadores(){
+  const banqueiros = DB.read('Usuarios_Banqueiros');
+  const chefes = DB.read('Usuarios_Chefes');
+  const admins = DB.read('Usuarios_Admin');
+  return `
+    <div class="grid lg:grid-cols-3 gap-5">
+      <div class="bg-white rounded-[22px] border border-bci-line shadow-card lg:col-span-2">
+        <div class="px-5 py-4 border-b border-bci-line flex items-center justify-between">
+          <div class="font-[800]">Banqueiros (${banqueiros.length})</div>
+        </div>
+        <div class="overflow-auto bci-scroll">
+          <table class="w-full text-[13.5px] min-w-[620px]">
+            <thead class="bg-bci-bg text-[11.5px] uppercase tracking-wider text-bci-muted">
+              <tr><th class="text-left px-5 py-3">Nome</th><th class="text-left px-5 py-3">ID</th><th class="text-left px-5 py-3">Província</th><th class="text-left px-5 py-3">Telefone</th><th class="text-left px-5 py-3">Estado</th></tr>
+            </thead>
+            <tbody>
+              ${banqueiros.map(b=>`
+                <tr class="border-t border-bci-line">
+                  <td class="px-5 py-3 font-semibold">${b.nome}</td>
+                  <td class="px-5 py-3 font-mono text-[12.5px]">${b.id_banqueiro}</td>
+                  <td class="px-5 py-3 text-bci-muted">${b.provincia||'-'}</td>
+                  <td class="px-5 py-3 text-bci-muted">${b.telefone||'-'}</td>
+                  <td class="px-5 py-3">
+                    <span class="px-2.5 py-1 rounded-full text-[11.5px] font-[700] ${b.ativo!==false ? 'bg-emerald-50 text-emerald-700' : 'bg-bci-bg text-bci-muted'}">${b.ativo!==false ? 'Activo' : 'Inactivo'}</span>
+                  </td>
+                </tr>
+              `).join('') || `<tr><td colspan="5" class="px-5 py-6 text-bci-muted">Sem banqueiros cadastrados.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="space-y-5">
+        <div class="bg-white rounded-[22px] border border-bci-line shadow-card p-5">
+          <div class="font-[800] mb-3">Chefes (${chefes.length})</div>
+          <div class="space-y-2 text-[13.5px]">
+            ${chefes.map(c=>`<div class="flex items-center justify-between bg-bci-bg rounded-xl px-3 py-2"><div><b>${c.nome}</b><br><span class="text-bci-muted text-[12px]">${c.id_chefe} • ${c.area||'-'}</span></div></div>`).join('') || '<span class="text-bci-muted">Sem chefes cadastrados.</span>'}
+          </div>
+        </div>
+        <div class="bg-white rounded-[22px] border border-bci-line shadow-card p-5">
+          <div class="font-[800] mb-3">Administradores (${admins.length})</div>
+          <div class="space-y-2 text-[13.5px]">
+            ${admins.map(a=>`<div class="flex items-center justify-between bg-bci-bg rounded-xl px-3 py-2"><div><b>${a.nome}</b><br><span class="text-bci-muted text-[12px]">${a.id_admin} • ${a.area||'-'}</span></div></div>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function bindAdmin(){
+  $('#adminLogout').onclick = logout;
+  $('#btnAdminOpenChefe').onclick = ()=>{ Session.clear(); appMode='chefe'; route='dashboard'; render(); };
+  $('#btnAdminOpenBanqueiro').onclick = ()=>{ Session.clear(); appMode='banqueiro'; route='dashboard'; render(); };
+
+  document.querySelectorAll('.admin-tab').forEach(b=>{
+    b.onclick = ()=>{ adminTab = b.dataset.adminTab; render(); };
+  });
+
+  if(adminTab==='mercados'){
+    bindPainelMercados('admin');
+  }
+  if(adminTab==='horas'){
+    bindChefeHoras();
+  }
+}
+
+/* Init */
+render();
+</script>
+</body>
+</html>
