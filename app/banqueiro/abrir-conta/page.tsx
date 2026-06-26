@@ -180,7 +180,7 @@ export default function AbrirConta() {
                   <Label htmlFor="pacote">Pacote</Label>
                   <Select 
                     value={formData.pacote} 
-                    onValueChange={(val) => setFormData({...formData, pacote: val})}
+                    onValueChange={(val) => setFormData({...formData, pacote: val || formData.pacote})}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione um pacote" />
