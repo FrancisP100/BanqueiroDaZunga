@@ -33,7 +33,7 @@ export function ProfileForm({
         <p className="mt-2 text-sm font-medium text-bci-muted">{description}</p>
       </label>
 
-      {state?.error && (
+      {state?.error && typeof state.error === "string" && state.error.length > 0 && (
         <div className="md:col-span-2 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
           {state.error}
         </div>
