@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 
@@ -42,45 +42,90 @@ export async function registerProfile(
     return { error: `O código interno "${codigoInterno}" já está em uso.` };
   }
 
-  // Usar admin client para criar utilizador — mais robusto que signUp com anon key
-  const adminClient = createAdminClient();
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 
-  const { data: userData, error: createError } = await adminClient.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true, // confirmar directamente sem email
-    user_metadata: { papel: role },
-  });
+  let userId: string;
 
-  if (createError) {
-    if (createError.message.includes("already been registered") || createError.message.includes("already exists")) {
-      return { error: "Este email já está registado. Tente fazer login." };
+  if (serviceKey) {
+    // Caminho preferencial: usar admin API com service role
+    const adminClient = createSupabaseAdmin(supabaseUrl, serviceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    const { data: userData, error: createError } = await adminClient.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { papel: role },
+    });
+
+    if (createError) {
+      if (createError.message.toLowerCase().includes("already")) {
+        return { error: "Este email já está registado. Tente fazer login." };
+      }
+      return { error: "Erro ao criar utilizador: " + createError.message };
     }
-    return { error: "Erro ao criar utilizador: " + createError.message };
-  }
 
-  const userId = userData?.user?.id;
-  if (!userId) {
-    return { error: "Não foi possível obter o ID do utilizador criado." };
-  }
+    if (!userData?.user?.id) {
+      return { error: "Não foi possível obter o ID do utilizador." };
+    }
 
-  // Inserir perfil na tabela profiles
-  const { error: profileError } = await supabase.from("profiles").insert({
-    id: userId,
-    email,
-    nome,
-    codigo_interno: codigoInterno,
-    papel: role,
-    telefone: telefone || null,
-    provincia: provincia || null,
-    local_id: localId || null,
-    ativo: true,
-  });
+    userId = userData.user.id;
 
-  if (profileError) {
-    // Limpar utilizador auth para evitar contas órfãs
-    await adminClient.auth.admin.deleteUser(userId).catch(() => {});
-    return { error: "Erro ao guardar o perfil: " + profileError.message };
+    // Inserir perfil
+    const { error: profileError } = await supabase.from("profiles").insert({
+      id: userId,
+      email,
+      nome,
+      codigo_interno: codigoInterno,
+      papel: role,
+      telefone: telefone || null,
+      provincia: provincia || null,
+      local_id: localId || null,
+      ativo: true,
+    });
+
+    if (profileError) {
+      await adminClient.auth.admin.deleteUser(userId).catch(() => {});
+      return { error: "Erro ao guardar o perfil: " + profileError.message };
+    }
+  } else {
+    // Fallback: usar signUp com anon key (requer confirmação de email desactivada)
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { papel: role } },
+    });
+
+    if (signUpError) {
+      if (signUpError.message.toLowerCase().includes("already")) {
+        return { error: "Este email já está registado. Tente fazer login." };
+      }
+      return { error: "Erro ao criar utilizador: " + signUpError.message };
+    }
+
+    if (!signUpData?.user?.id) {
+      return { error: "Não foi possível criar o utilizador. Tente novamente." };
+    }
+
+    userId = signUpData.user.id;
+
+    const { error: profileError } = await supabase.from("profiles").insert({
+      id: userId,
+      email,
+      nome,
+      codigo_interno: codigoInterno,
+      papel: role,
+      telefone: telefone || null,
+      provincia: provincia || null,
+      local_id: localId || null,
+      ativo: true,
+    });
+
+    if (profileError) {
+      return { error: "Erro ao guardar o perfil: " + profileError.message };
+    }
   }
 
   redirect("/login");
