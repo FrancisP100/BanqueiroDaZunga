@@ -43,6 +43,17 @@ export async function registerProfile(
       })
     : await createClient();
 
+  // Verificar se email já existe em profiles
+  const { data: existingEmail } = await adminClient
+    .from("profiles")
+    .select("id")
+    .eq("email", email)
+    .maybeSingle();
+
+  if (existingEmail) {
+    return { error: "Este email já está registado. Tente fazer login." };
+  }
+
   // Verificar se código interno já existe
   const { data: existing } = await adminClient
     .from("profiles")
@@ -119,6 +130,12 @@ export async function registerProfile(
     if (serviceKey) {
       await (adminClient as ReturnType<typeof createSupabaseClient>)
         .auth.admin.deleteUser(userId).catch(() => {});
+    }
+    if (profileError.message.includes("duplicate key") && profileError.message.includes("email")) {
+      return { error: "Este email já está registado. Tente fazer login." };
+    }
+    if (profileError.message.includes("duplicate key") && profileError.message.includes("codigo_interno")) {
+      return { error: `O código interno "${codigoInterno}" já está em uso.` };
     }
     return { error: "Erro ao guardar o perfil: " + profileError.message };
   }
