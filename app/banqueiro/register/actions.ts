@@ -5,7 +5,10 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 
-export async function registerProfile(formData: FormData) {
+export async function registerProfile(
+  _prevState: { error: string } | null,
+  formData: FormData,
+) {
   if (!hasSupabaseEnv()) {
     redirect("/login");
   }
