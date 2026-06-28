@@ -20,7 +20,10 @@ export async function registerProfile(
   const codigoInterno = String(formData.get("codigo_interno") ?? "").trim();
   const telefone = String(formData.get("telefone") ?? "").trim();
   const provincia = String(formData.get("provincia") ?? "").trim();
-  const localId = String(formData.get("local_id") ?? "").trim();
+  const localIdRaw = String(formData.get("local_id") ?? "").trim();
+  // Aceitar apenas UUIDs válidos (formato: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const localId = uuidRegex.test(localIdRaw) ? localIdRaw : "";
 
   // Validações
   if (!email) return { error: "O email é obrigatório." };

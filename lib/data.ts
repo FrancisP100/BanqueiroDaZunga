@@ -89,7 +89,7 @@ export async function getMvpData() {
 
   return {
     accounts: accounts.length ? accounts : mockAccounts,
-    markets: markets.length ? markets : mockMarkets,
+    markets: markets.length ? markets : [],
     presences: presences.length ? presences : mockPresences,
     profiles: profiles.length ? profiles : mockProfiles,
     punctualityRule
