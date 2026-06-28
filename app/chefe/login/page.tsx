@@ -4,7 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createBrowserClient } from "@supabase/ssr";
-import { LogIn, Building2, ArrowLeft, UsersRound } from "lucide-react";
+import { LogIn, ArrowLeft, UsersRound } from "lucide-react";
+
+const hasSupabase = Boolean(
+  process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
 
 export default function ChefeLoginPage() {
   const [email, setEmail] = useState("");
@@ -13,15 +17,22 @@ export default function ChefeLoginPage() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
+  const supabase = hasSupabase
+    ? createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      )
+    : null;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    if (!supabase) {
+      router.push("/chefe");
+      return;
+    }
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -29,11 +40,8 @@ export default function ChefeLoginPage() {
         password,
       });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
-      // Fetch user profile to get the role
       if (data.user) {
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
@@ -41,11 +49,8 @@ export default function ChefeLoginPage() {
           .eq("id", data.user.id)
           .single();
 
-        if (profileError) {
-          throw profileError;
-        }
+        if (profileError) throw profileError;
 
-        // Verify the user is a chefe
         if (profileData.papel !== "chefe") {
           setError("Acesso negado. Esta área é apenas para chefes.");
           await supabase.auth.signOut();
@@ -72,11 +77,11 @@ export default function ChefeLoginPage() {
 
         <div className="p-8">
           <Link
-            href="/"
+            href="/login"
             className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-6 transition-colors"
           >
             <ArrowLeft size={16} className="mr-1" />
-            Voltar à página inicial
+            Voltar à escolha de área
           </Link>
 
           <h2 className="text-2xl font-semibold text-gray-800 mb-6 text-center">
@@ -123,9 +128,7 @@ export default function ChefeLoginPage() {
               disabled={loading}
               className="w-full bg-bci-blue hover:bg-bci-blue/90 text-white py-2 px-4 rounded-md font-medium transition-colors flex items-center justify-center disabled:opacity-70 mt-6"
             >
-              {loading ? (
-                "A entrar..."
-              ) : (
+              {loading ? "A entrar..." : (
                 <>
                   <LogIn size={20} className="mr-2" />
                   Entrar no Sistema
@@ -134,12 +137,9 @@ export default function ChefeLoginPage() {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-center text-sm text-gray-500">
+          <p className="mt-6 text-center text-sm text-gray-500">
             Não tem conta?{" "}
-            <Link
-              href="/chefe/register"
-              className="font-bold text-bci-blue hover:underline"
-            >
+            <Link href="/chefe/register" className="font-bold text-bci-blue hover:underline">
               Registar-se
             </Link>
           </p>

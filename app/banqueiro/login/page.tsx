@@ -4,7 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createBrowserClient } from "@supabase/ssr";
-import { LogIn, Building2, ArrowLeft, UserRound } from "lucide-react";
+import { LogIn, ArrowLeft, UserRound } from "lucide-react";
+
+const hasSupabase = Boolean(
+  process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
 
 export default function BanqueiroLoginPage() {
   const [email, setEmail] = useState("");
@@ -13,15 +17,23 @@ export default function BanqueiroLoginPage() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
+  const supabase = hasSupabase
+    ? createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      )
+    : null;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    // Bypass: sem Supabase configurado, entra directo
+    if (!supabase) {
+      router.push("/banqueiro");
+      return;
+    }
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -33,7 +45,6 @@ export default function BanqueiroLoginPage() {
         throw error;
       }
 
-      // Fetch user profile to get the role
       if (data.user) {
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
@@ -45,7 +56,6 @@ export default function BanqueiroLoginPage() {
           throw profileError;
         }
 
-        // Verify the user is a banqueiro
         if (profileData.papel !== "banqueiro") {
           setError("Acesso negado. Esta área é apenas para banqueiros.");
           await supabase.auth.signOut();
