@@ -81,21 +81,17 @@ export default function PresencasPage() {
     }));
     setBanqueiros(banqList);
 
-    const presList: PresenceRow[] = (pResult.data ?? []).map((row: {
-      id: string; profile_id: string; entrada: string | null; saida: string | null;
-      status: PresenceStatus; pontualidade: Punctuality; origem: string;
-      mercado_id: string | null;
-      profiles: { nome: string } | null; markets: { nome: string } | null;
-    }) => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const presList: PresenceRow[] = (pResult.data ?? []).map((row: any) => ({
       id: row.id,
       profileId: row.profile_id,
-      nome: row.profiles?.nome ?? '',
+      nome: Array.isArray(row.profiles) ? (row.profiles[0]?.nome ?? '') : (row.profiles?.nome ?? ''),
       mercadoId: row.mercado_id,
-      mercadoNome: row.markets?.nome ?? '-',
+      mercadoNome: Array.isArray(row.markets) ? (row.markets[0]?.nome ?? '-') : (row.markets?.nome ?? '-'),
       entrada: row.entrada ? String(row.entrada).slice(0, 5) : null,
       saida: row.saida ? String(row.saida).slice(0, 5) : null,
-      status: row.status,
-      pontualidade: row.pontualidade,
+      status: row.status as PresenceStatus,
+      pontualidade: row.pontualidade as Punctuality,
       origem: row.origem,
     }));
     setPresences(presList);
