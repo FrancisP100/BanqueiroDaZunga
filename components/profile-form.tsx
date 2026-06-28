@@ -1,8 +1,13 @@
 "use client";
 
 import { useActionState } from "react";
-import { registerProfile } from "@/app/banqueiro/register/actions";
+import { registerProfile as defaultRegisterProfile } from "@/app/banqueiro/register/actions";
 import type { Market, UserRole } from "@/lib/types";
+
+type RegisterAction = (
+  prevState: { error: string } | null,
+  formData: FormData
+) => Promise<{ error: string } | null>;
 
 type ProfileFormProps = {
   role: UserRole;
@@ -10,6 +15,7 @@ type ProfileFormProps = {
   description: string;
   showMarket?: boolean;
   markets?: Market[];
+  action?: RegisterAction;
 };
 
 export function ProfileForm({
@@ -18,8 +24,10 @@ export function ProfileForm({
   description,
   showMarket,
   markets = [],
+  action,
 }: ProfileFormProps) {
-  const [state, formAction, pending] = useActionState(registerProfile, null);
+  const registerAction = action ?? defaultRegisterProfile;
+  const [state, formAction, pending] = useActionState(registerAction, null);
 
   return (
     <form

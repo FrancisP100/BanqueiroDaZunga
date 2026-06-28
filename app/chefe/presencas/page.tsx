@@ -1,9 +1,8 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
-import Link from 'next/link';
 import { createBrowserClient } from '@supabase/ssr';
-import { Users, CheckCircle, Clock, XCircle, ClipboardList } from 'lucide-react';
+import { CheckCircle, Clock, XCircle, Users } from 'lucide-react';
 import { PresenceBadge, PunctualityBadge } from '@/components/ui/status-badge';
 import type { PresenceStatus, Punctuality } from '@/lib/types';
 import { updatePresence, createManualPresence } from '@/app/chefe/actions';
@@ -12,8 +11,10 @@ type PresenceRow = {
   id: string;
   profileId: string;
   nome: string;
+  mercadoId: string | null;
   mercadoNome: string;
   entrada: string | null;
+  saida: string | null;
   status: PresenceStatus;
   pontualidade: Punctuality;
   origem: string;
@@ -29,7 +30,7 @@ function today() {
   return new Date().toISOString().split('T')[0];
 }
 
-export default function ChefeDashboard() {
+export default function PresencasPage() {
   const [loading, setLoading] = useState(true);
   const [date, setDate] = useState(today());
   const [presences, setPresences] = useState<PresenceRow[]>([]);
@@ -64,8 +65,9 @@ export default function ChefeDashboard() {
       supabase.from('markets').select('id, nome'),
       supabase
         .from('presences')
-        .select('id, profile_id, data, entrada, status, pontualidade, origem, profiles(nome), markets(nome)')
-        .eq('data', d),
+        .select('id, profile_id, data, entrada, saida, status, pontualidade, origem, mercado_id, profiles(nome), markets(nome)')
+        .eq('data', d)
+        .order('entrada', { ascending: true }),
     ]);
 
     const mMap: Record<string, string> = {};
@@ -80,15 +82,18 @@ export default function ChefeDashboard() {
     setBanqueiros(banqList);
 
     const presList: PresenceRow[] = (pResult.data ?? []).map((row: {
-      id: string; profile_id: string; entrada: string | null;
+      id: string; profile_id: string; entrada: string | null; saida: string | null;
       status: PresenceStatus; pontualidade: Punctuality; origem: string;
+      mercado_id: string | null;
       profiles: { nome: string } | null; markets: { nome: string } | null;
     }) => ({
       id: row.id,
       profileId: row.profile_id,
       nome: row.profiles?.nome ?? '',
+      mercadoId: row.mercado_id,
       mercadoNome: row.markets?.nome ?? '-',
       entrada: row.entrada ? String(row.entrada).slice(0, 5) : null,
+      saida: row.saida ? String(row.saida).slice(0, 5) : null,
       status: row.status,
       pontualidade: row.pontualidade,
       origem: row.origem,
@@ -98,12 +103,13 @@ export default function ChefeDashboard() {
     setLoading(false);
   }
 
-  // Stats
   const presenceIds = new Set(presences.map((p) => p.profileId));
+  const noRecord = banqueiros.filter((b) => !presenceIds.has(b.id));
+
+  // Stats
   const presentCount = presences.filter((p) => p.status === 'no_local').length;
   const lateCount    = presences.filter((p) => p.pontualidade === 'atraso').length;
-  const absentCount  = presences.filter((p) => p.status === 'falta').length;
-  const noRecord     = banqueiros.filter((b) => !presenceIds.has(b.id));
+  const absentCount  = presences.filter((p) => p.status === 'falta').length + noRecord.length;
 
   function openEditDialog(p: PresenceRow) {
     setSelected(p);
@@ -159,25 +165,15 @@ export default function ChefeDashboard() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-bci-blue/70">
-            Painel do Chefe
+            Gestão de Presenças
           </p>
           <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-bci-ink">
-            Resumo Diário
+            Mapa de Presenças
           </h1>
         </div>
-        <Link
-          href="/chefe/presencas"
-          className="flex items-center gap-2 rounded-xl bg-bci-blue px-5 py-2.5 text-sm font-extrabold text-white hover:opacity-90 transition"
-        >
-          <ClipboardList size={16} />
-          Ver todas as presenças
-        </Link>
-      </div>
 
-      {/* Date picker */}
-      <div className="flex items-center gap-3">
         <label className="text-sm font-bold text-bci-ink">
-          Data:
+          Data
           <input
             type="date"
             value={date}
@@ -190,10 +186,10 @@ export default function ChefeDashboard() {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Banqueiros', value: banqueiros.length, icon: Users, color: 'text-bci-blue bg-bci-blueSoft' },
-          { label: 'Presentes', value: presentCount, icon: CheckCircle, color: 'text-emerald-600 bg-emerald-50' },
-          { label: 'Atrasos', value: lateCount, icon: Clock, color: 'text-amber-600 bg-amber-50' },
-          { label: 'Faltas', value: absentCount, icon: XCircle, color: 'text-red-600 bg-red-50' },
+          { label: 'Total Banqueiros', value: banqueiros.length, icon: Users,        color: 'text-bci-blue bg-bci-blueSoft' },
+          { label: 'Presentes',        value: presentCount,      icon: CheckCircle,  color: 'text-emerald-600 bg-emerald-50' },
+          { label: 'Atrasos',          value: lateCount,         icon: Clock,        color: 'text-amber-600 bg-amber-50' },
+          { label: 'Faltas / Sem reg', value: absentCount,       icon: XCircle,      color: 'text-red-600 bg-red-50' },
         ].map(({ label, value, icon: Icon, color }) => (
           <div key={label} className="rounded-2xl border border-bci-line bg-white p-5 shadow-card">
             <div className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${color}`}>
@@ -205,19 +201,20 @@ export default function ChefeDashboard() {
         ))}
       </div>
 
-      {/* Presences Table */}
+      {/* Presences with record */}
       <div className="rounded-2xl border border-bci-line bg-white shadow-card overflow-hidden">
-        <div className="px-5 py-4 border-b border-bci-line">
+        <div className="px-5 py-4 border-b border-bci-line flex items-center justify-between">
           <h2 className="font-extrabold text-bci-ink">
-            Presenças de {date}
+            Registos de Presença — {date}
           </h2>
+          <span className="text-sm font-semibold text-bci-muted">{presences.length} registos</span>
         </div>
 
         {loading ? (
-          <p className="py-10 text-center text-sm text-bci-muted">A carregar presenças…</p>
+          <p className="py-10 text-center text-sm text-bci-muted">A carregar…</p>
         ) : presences.length === 0 ? (
           <p className="py-10 text-center text-sm text-bci-muted">
-            Sem registos de presença para esta data.
+            Sem presenças registadas para esta data.
           </p>
         ) : (
           <div className="overflow-x-auto">
@@ -227,6 +224,7 @@ export default function ChefeDashboard() {
                   <th className="px-4 py-3">Nome</th>
                   <th className="px-4 py-3">Mercado</th>
                   <th className="px-4 py-3">Entrada</th>
+                  <th className="px-4 py-3">Saída</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Pontualidade</th>
                   <th className="px-4 py-3">Origem</th>
@@ -235,10 +233,11 @@ export default function ChefeDashboard() {
               </thead>
               <tbody>
                 {presences.map((p) => (
-                  <tr key={p.id} className="border-t border-bci-line">
+                  <tr key={p.id} className="border-t border-bci-line hover:bg-slate-50/50">
                     <td className="px-4 py-3 font-bold">{p.nome}</td>
                     <td className="px-4 py-3 text-bci-muted">{p.mercadoNome}</td>
                     <td className="px-4 py-3">{p.entrada ?? '—'}</td>
+                    <td className="px-4 py-3">{p.saida ?? '—'}</td>
                     <td className="px-4 py-3"><PresenceBadge value={p.status} /></td>
                     <td className="px-4 py-3"><PunctualityBadge value={p.pontualidade} /></td>
                     <td className="px-4 py-3">
@@ -247,9 +246,9 @@ export default function ChefeDashboard() {
                     <td className="px-4 py-3">
                       <button
                         onClick={() => openEditDialog(p)}
-                        className="rounded-lg bg-bci-blueSoft px-3 py-1.5 text-xs font-extrabold text-bci-blue hover:bg-bci-blue hover:text-white transition-colors"
+                        className="rounded-lg bg-bci-blueSoft px-3 py-1.5 text-xs font-extrabold text-bci-blue hover:bg-bci-blue hover:text-white transition-colors whitespace-nowrap"
                       >
-                        Corrigir
+                        Correcção Manual
                       </button>
                     </td>
                   </tr>
@@ -260,15 +259,15 @@ export default function ChefeDashboard() {
         )}
       </div>
 
-      {/* Banqueiros sem registo */}
+      {/* Banqueiros without record */}
       {!loading && noRecord.length > 0 && (
         <div className="rounded-2xl border border-bci-line bg-white shadow-card overflow-hidden">
           <div className="px-5 py-4 border-b border-bci-line">
             <h2 className="font-extrabold text-bci-ink">
-              Sem registo ({noRecord.length})
+              Sem Registo ({noRecord.length})
             </h2>
-            <p className="text-xs text-bci-muted mt-0.5">
-              Banqueiros sem presença registada para esta data.
+            <p className="mt-0.5 text-xs text-bci-muted">
+              Banqueiros sem presença registada para {date}.
             </p>
           </div>
           <div className="overflow-x-auto">
@@ -282,7 +281,7 @@ export default function ChefeDashboard() {
               </thead>
               <tbody>
                 {noRecord.map((b) => (
-                  <tr key={b.id} className="border-t border-bci-line">
+                  <tr key={b.id} className="border-t border-bci-line hover:bg-slate-50/50">
                     <td className="px-4 py-3 font-bold">{b.nome}</td>
                     <td className="px-4 py-3 text-bci-muted">
                       {b.localId ? (marketMap[b.localId] ?? b.localId) : '—'}
@@ -308,7 +307,7 @@ export default function ChefeDashboard() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-soft mx-4">
             <h3 className="text-lg font-extrabold text-bci-ink mb-1">
-              {selected ? 'Correcção Manual' : 'Marcar Falta'}
+              {selected ? 'Correcção Manual' : 'Criar Registo de Falta'}
             </h3>
             <p className="text-sm text-bci-muted mb-5">
               {selected ? selected.nome : selectedBanqueiro?.nome}
@@ -352,9 +351,9 @@ export default function ChefeDashboard() {
                 <textarea
                   value={observacao}
                   onChange={(e) => setObservacao(e.target.value)}
-                  rows={2}
+                  rows={3}
                   className="mt-2 w-full rounded-xl border border-bci-line px-4 py-3 font-medium text-sm outline-none focus:border-bci-blue focus:ring-4 focus:ring-blue-100 resize-none"
-                  placeholder="Motivo da correcção..."
+                  placeholder="Motivo da correcção ou observações…"
                 />
               </label>
             </div>
@@ -371,7 +370,7 @@ export default function ChefeDashboard() {
                 disabled={isPending}
                 className="flex-1 rounded-xl bg-bci-blue px-4 py-3 text-sm font-extrabold text-white hover:opacity-90 transition disabled:opacity-60"
               >
-                {isPending ? 'A guardar...' : 'Guardar'}
+                {isPending ? 'A guardar…' : 'Guardar'}
               </button>
             </div>
           </div>

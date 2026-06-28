@@ -1,7 +1,8 @@
-import { Building2, Home, Users } from "lucide-react";
+import { Building2, Home, Store, Users } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { ProfileForm } from "@/components/profile-form";
 import { getMvpData } from "@/lib/data";
+import { registerProfile } from "@/app/admin/actions";
 
 export default async function AdminChefesPage() {
   const { profiles } = await getMvpData();
@@ -18,6 +19,7 @@ export default async function AdminChefesPage() {
         { href: "/admin", label: "Visao geral", icon: Home },
         { href: "/admin/banqueiros", label: "Banqueiros", icon: Users },
         { href: "/admin/chefes", label: "Chefes", icon: Building2 },
+        { href: "/admin/mercados", label: "Mercados", icon: Store },
       ]}
     >
       <section className="grid gap-6 xl:grid-cols-[1.23fr_0.77fr]">
@@ -29,6 +31,7 @@ export default async function AdminChefesPage() {
             role="chefe"
             title="Dados do chefe"
             description="Registe um chefe para gerir presencas e acompanhar o desempenho dos banqueiros."
+            action={registerProfile}
           />
         </div>
         <div className="rounded-2xl border border-bci-line bg-white p-5 shadow-card">

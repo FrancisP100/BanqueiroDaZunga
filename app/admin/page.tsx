@@ -1,107 +1,140 @@
-'use client';
+import Link from 'next/link';
+import { Users, UserCheck, Store, Settings } from 'lucide-react';
+import { getMvpData } from '@/lib/data';
+import { updatePunctualityRule } from '@/app/admin/actions';
 
-import { useEffect, useState } from 'react';
-import { createBrowserClient } from '@supabase/ssr';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { LogOut, Settings, Users, Store } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+export default async function AdminDashboard() {
+  const { profiles, markets, punctualityRule } = await getMvpData();
 
-export default function AdminDashboard() {
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
-    mercados: 0,
-    utilizadores: 0,
-  });
-  
-  const router = useRouter();
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
-  useEffect(() => {
-    async function loadStats() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { count: uCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
-      const { count: mCount } = await supabase.from('markets').select('*', { count: 'exact', head: true });
-
-      setStats({
-        mercados: mCount || 0,
-        utilizadores: uCount || 0,
-      });
-
-      setLoading(false);
-    }
-    loadStats();
-  }, []);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/login');
-  };
-
-  if (loading) return <div className="p-8">A carregar painel de administração...</div>;
+  const banqueiros = profiles.filter((p) => p.papel === 'banqueiro');
+  const chefes = profiles.filter((p) => p.papel === 'chefe');
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-bci-dark text-white p-4 flex justify-between items-center shadow-md">
-        <h1 className="text-xl font-bold">Administração Global - BCI</h1>
-        <Button variant="ghost" onClick={handleLogout} className="text-white hover:text-white hover:bg-white/10">
-          <LogOut size={18} className="mr-2" /> Sair
-        </Button>
-      </header>
-      
-      <main className="p-8 max-w-6xl mx-auto space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card>
-            <CardContent className="p-6 flex items-center space-x-4">
-              <div className="p-3 bg-purple-100 text-purple-600 rounded-full">
-                <Store size={24} />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500">Mercados Registados</p>
-                <h3 className="text-2xl font-bold text-gray-900">{stats.mercados}</h3>
-              </div>
-            </CardContent>
-          </Card>
+    <div className="space-y-8">
+      {/* Header */}
+      <div>
+        <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-bci-navy/60">
+          Administração Global
+        </p>
+        <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-bci-ink">
+          Painel de Controlo
+        </h1>
+      </div>
 
-          <Card>
-            <CardContent className="p-6 flex items-center space-x-4">
-              <div className="p-3 bg-blue-100 text-blue-600 rounded-full">
-                <Users size={24} />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500">Total Utilizadores</p>
-                <h3 className="text-2xl font-bold text-gray-900">{stats.utilizadores}</h3>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6 flex items-center space-x-4 cursor-pointer hover:bg-gray-50 transition-colors">
-              <div className="p-3 bg-gray-200 text-gray-700 rounded-full">
-                <Settings size={24} />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500">Regras de Pontualidade</p>
-                <h3 className="text-base font-bold text-gray-900">Configurar</h3>
-              </div>
-            </CardContent>
-          </Card>
+      {/* Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="rounded-2xl border border-bci-line bg-white p-5 shadow-card">
+          <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-bci-muted">
+            Mercados
+          </p>
+          <p className="mt-2 text-3xl font-extrabold text-bci-ink">{markets.length}</p>
         </div>
+        <div className="rounded-2xl border border-bci-line bg-white p-5 shadow-card">
+          <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-bci-muted">
+            Banqueiros
+          </p>
+          <p className="mt-2 text-3xl font-extrabold text-bci-ink">{banqueiros.length}</p>
+        </div>
+        <div className="rounded-2xl border border-bci-line bg-white p-5 shadow-card">
+          <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-bci-muted">
+            Chefes
+          </p>
+          <p className="mt-2 text-3xl font-extrabold text-bci-ink">{chefes.length}</p>
+        </div>
+      </div>
 
-        <div className="mt-8 bg-white p-8 rounded-xl shadow-sm border text-center">
-          <h3 className="text-xl font-bold text-gray-800 mb-2">Painel de Controlo</h3>
-          <p className="text-gray-500 mb-6">As funcionalidades de gestão de entidades estarão disponíveis em breve.</p>
-          <div className="flex justify-center gap-4">
-            <Button disabled>Gerir Mercados</Button>
-            <Button disabled>Gerir Utilizadores</Button>
+      {/* Navigation Cards */}
+      <div>
+        <h2 className="mb-4 text-lg font-extrabold text-bci-ink">Gestão</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Link
+            href="/admin/banqueiros"
+            className="group flex items-center gap-4 rounded-2xl border border-bci-line bg-white p-5 shadow-card transition hover:border-bci-navy hover:shadow-soft"
+          >
+            <div className="grid h-12 w-12 flex-shrink-0 place-items-center rounded-xl bg-bci-navySoft text-bci-navy group-hover:bg-bci-navy group-hover:text-white transition-colors">
+              <Users size={22} />
+            </div>
+            <div>
+              <p className="font-extrabold text-bci-ink">Gerir Banqueiros</p>
+              <p className="mt-0.5 text-xs text-bci-muted">
+                {banqueiros.length} registados
+              </p>
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/chefes"
+            className="group flex items-center gap-4 rounded-2xl border border-bci-line bg-white p-5 shadow-card transition hover:border-bci-navy hover:shadow-soft"
+          >
+            <div className="grid h-12 w-12 flex-shrink-0 place-items-center rounded-xl bg-bci-navySoft text-bci-navy group-hover:bg-bci-navy group-hover:text-white transition-colors">
+              <UserCheck size={22} />
+            </div>
+            <div>
+              <p className="font-extrabold text-bci-ink">Gerir Chefes</p>
+              <p className="mt-0.5 text-xs text-bci-muted">
+                {chefes.length} registados
+              </p>
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/mercados"
+            className="group flex items-center gap-4 rounded-2xl border border-bci-line bg-white p-5 shadow-card transition hover:border-bci-navy hover:shadow-soft"
+          >
+            <div className="grid h-12 w-12 flex-shrink-0 place-items-center rounded-xl bg-bci-navySoft text-bci-navy group-hover:bg-bci-navy group-hover:text-white transition-colors">
+              <Store size={22} />
+            </div>
+            <div>
+              <p className="font-extrabold text-bci-ink">Gerir Mercados</p>
+              <p className="mt-0.5 text-xs text-bci-muted">
+                {markets.length} registados
+              </p>
+            </div>
+          </Link>
+        </div>
+      </div>
+
+      {/* Punctuality Settings */}
+      <div className="rounded-2xl border border-bci-line bg-white p-6 shadow-card">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-bci-navySoft text-bci-navy">
+            <Settings size={18} />
+          </div>
+          <div>
+            <p className="font-extrabold text-bci-ink">Regras de Pontualidade</p>
+            <p className="text-xs text-bci-muted">Definir hora limite e tolerância para marcação de presença</p>
           </div>
         </div>
-      </main>
+
+        <form action={updatePunctualityRule} className="grid gap-4 md:grid-cols-3 items-end">
+          <label className="text-sm font-bold text-bci-ink">
+            Hora limite
+            <input
+              name="hora_limite"
+              type="time"
+              defaultValue={punctualityRule.horaLimite}
+              className="mt-2 w-full rounded-xl border border-bci-line px-4 py-3 font-medium outline-none focus:border-bci-navy focus:ring-4 focus:ring-bci-navySoft"
+            />
+          </label>
+          <label className="text-sm font-bold text-bci-ink">
+            Tolerância (minutos)
+            <input
+              name="tolerancia_min"
+              type="number"
+              defaultValue={punctualityRule.toleranciaMin}
+              min={0}
+              max={120}
+              className="mt-2 w-full rounded-xl border border-bci-line px-4 py-3 font-medium outline-none focus:border-bci-navy focus:ring-4 focus:ring-bci-navySoft"
+            />
+          </label>
+          <button
+            type="submit"
+            className="rounded-xl bg-bci-navy px-5 py-3 text-sm font-extrabold text-white hover:bg-bci-navy2 transition-colors"
+          >
+            Guardar regras
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
