@@ -8,6 +8,23 @@ type CookieToSet = {
   options: CookieOptions;
 };
 
+// Páginas de login/register por role — sempre públicas
+const LOGIN_REGISTER_PATHS = [
+  "/banqueiro/login",
+  "/banqueiro/register",
+  "/chefe/login",
+  "/chefe/register",
+  "/admin/login",
+  "/onboarding",
+  "/login",
+];
+
+function isLoginOrRegister(pathname: string): boolean {
+  return LOGIN_REGISTER_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(p + "/"),
+  );
+}
+
 const protectedRoutes = [
   { prefix: "/banqueiro", role: "banqueiro" },
   { prefix: "/chefe", role: "chefe" },
@@ -16,13 +33,13 @@ const protectedRoutes = [
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
+  const { pathname } = request.nextUrl;
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  const bypassAuth =
-    process.env.NEXT_PUBLIC_BYPASS_AUTH === "1" ||
-    process.env.NODE_ENV === "development";
 
-  if (!supabaseUrl || !supabaseKey || bypassAuth) return response;
+  // Se o Supabase não estiver configurado, deixa passar tudo
+  if (!supabaseUrl || !supabaseKey) return response;
 
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
     cookies: {
@@ -39,26 +56,44 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  if (
-    request.nextUrl.pathname.startsWith("/banqueiro/register") ||
-    request.nextUrl.pathname.startsWith("/chefe/register")
-  ) {
+  const { data } = await supabase.auth.getUser();
+  const user = data.user;
+
+  // Utilizador autenticado a tentar aceder a página de login/register
+  // → redirigir directamente para a sua área
+  if (user && isLoginOrRegister(pathname)) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("papel")
+      .eq("id", user.id)
+      .single();
+
+    const role = profile?.papel;
+    if (role === "banqueiro") return NextResponse.redirect(new URL("/banqueiro", request.url));
+    if (role === "chefe") return NextResponse.redirect(new URL("/chefe", request.url));
+    if (role === "admin") return NextResponse.redirect(new URL("/admin", request.url));
     return response;
   }
 
+  // Páginas de login/register são públicas — não verificar mais nada
+  if (isLoginOrRegister(pathname)) return response;
+
+  // Verificar se é uma rota protegida
   const match = protectedRoutes.find((route) =>
-    request.nextUrl.pathname.startsWith(route.prefix),
+    pathname.startsWith(route.prefix),
   );
   if (!match) return response;
 
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) return NextResponse.redirect(new URL("/login", request.url));
+  // Utilizador não autenticado a tentar aceder a rota protegida
+  if (!user) return NextResponse.redirect(new URL("/login", request.url));
 
+  // RBAC — utilizador autenticado mas com role errado
   const { data: profile } = await supabase
     .from("profiles")
     .select("papel")
-    .eq("id", data.user.id)
+    .eq("id", user.id)
     .single();
+
   if (profile?.papel !== match.role) {
     return NextResponse.redirect(
       new URL(`/${profile?.papel ?? "login"}`, request.url),
@@ -69,5 +104,11 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/banqueiro/:path*", "/chefe/:path*", "/admin/:path*"],
+  matcher: [
+    "/banqueiro/:path*",
+    "/chefe/:path*",
+    "/admin/:path*",
+    "/login",
+    "/onboarding",
+  ],
 };
