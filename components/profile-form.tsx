@@ -1,3 +1,6 @@
+"use client";
+
+import { useActionState } from "react";
 import { registerProfile } from "@/app/banqueiro/register/actions";
 import type { Market, UserRole } from "@/lib/types";
 
@@ -16,16 +19,26 @@ export function ProfileForm({
   showMarket,
   markets = [],
 }: ProfileFormProps) {
+  const [state, formAction, pending] = useActionState(registerProfile, null);
+
   return (
     <form
-      action={registerProfile}
+      action={formAction}
       className="grid gap-4 rounded-2xl border border-bci-line bg-white p-5 shadow-card md:grid-cols-2"
     >
       <input name="papel" type="hidden" value={role} />
+
       <label className="text-sm font-bold text-bci-ink md:col-span-2">
         {title}
         <p className="mt-2 text-sm font-medium text-bci-muted">{description}</p>
       </label>
+
+      {state?.error && (
+        <div className="md:col-span-2 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
+          {state.error}
+        </div>
+      )}
+
       <label className="text-sm font-bold text-bci-ink">
         Nome completo
         <input
@@ -73,7 +86,7 @@ export function ProfileForm({
           name="password"
           type="password"
           className="mt-2 w-full rounded-xl border border-bci-line px-4 py-3 font-medium outline-none focus:border-bci-pink focus:ring-4 focus:ring-pink-100"
-          placeholder="Uma senha segura"
+          placeholder="Mínimo 6 caracteres"
         />
       </label>
       {showMarket ? (
@@ -92,17 +105,13 @@ export function ProfileForm({
           </select>
         </label>
       ) : null}
-      <div className="md:col-span-2">
-        <p className="text-sm text-bci-muted">
-          O registo sera persistido no Supabase sempre que a configuracao de
-          ambiente estiver ativa.
-        </p>
-      </div>
+
       <button
-        className="rounded-xl bg-bci-navy px-5 py-3 text-sm font-extrabold text-white md:col-span-2"
+        className="rounded-xl bg-bci-navy px-5 py-3 text-sm font-extrabold text-white md:col-span-2 disabled:opacity-60"
         type="submit"
+        disabled={pending}
       >
-        Cadastrar {role === "banqueiro" ? "banqueiro" : "chefe"}
+        {pending ? "A registar..." : `Cadastrar ${role === "banqueiro" ? "banqueiro" : "chefe"}`}
       </button>
     </form>
   );

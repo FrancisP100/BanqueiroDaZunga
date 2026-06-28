@@ -11,26 +11,38 @@ export async function registerProfile(formData: FormData) {
   }
 
   const supabase = await createClient();
-  const email = String(formData.get("email") ?? "");
+  const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const role = String(formData.get("papel") ?? "banqueiro");
   const localId = String(formData.get("local_id") ?? "");
 
   if (!email || !password) {
-    return;
+    return { error: "Email e senha são obrigatórios" };
+  }
+
+  if (password.length < 6) {
+    return { error: "A senha deve ter pelo menos 6 caracteres" };
   }
 
   const signUpResult = await supabase.auth.signUp({
     email,
     password,
+    options: {
+      // Não enviar email de confirmação — o admin regista directamente
+      data: { papel: role },
+    },
   });
+
+  if (signUpResult.error) {
+    return { error: signUpResult.error.message };
+  }
 
   const userId = signUpResult.data?.user?.id;
   if (!userId) {
-    return;
+    return { error: "Não foi possível criar o utilizador" };
   }
 
-  await supabase.from("profiles").insert({
+  const { error: profileError } = await supabase.from("profiles").upsert({
     id: userId,
     email,
     nome: String(formData.get("nome") ?? ""),
@@ -41,6 +53,10 @@ export async function registerProfile(formData: FormData) {
     local_id: localId || null,
     ativo: true,
   });
+
+  if (profileError) {
+    return { error: profileError.message };
+  }
 
   revalidatePath("/");
   redirect("/login");
