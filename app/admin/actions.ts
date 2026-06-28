@@ -21,12 +21,12 @@ async function getAdminClient() {
 
 export async function createMarket(
   formData: FormData
-): Promise<{ error?: string } | void> {
+): Promise<void> {
   if (!hasSupabaseEnv()) return;
 
   const adminClient = await getAdminClient();
 
-  const { error } = await adminClient.from("markets").insert({
+  await adminClient.from("markets").insert({
     nome:        String(formData.get("nome")        ?? ""),
     provincia:   String(formData.get("provincia")   ?? ""),
     tipo:        String(formData.get("tipo")         ?? "mercado"),
@@ -35,8 +35,6 @@ export async function createMarket(
     longitude:   Number(formData.get("longitude")),
     raio_metros: Number(formData.get("raio_metros") ?? 100),
   });
-
-  if (error) return { error: "Erro ao criar mercado: " + error.message };
 
   revalidatePath("/admin");
   revalidatePath("/admin/mercados");
