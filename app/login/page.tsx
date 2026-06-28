@@ -1,6 +1,19 @@
 import Link from "next/link";
-import Image from "next/image";
 import { ShieldCheck, UserRound, UsersRound, ArrowRight } from "lucide-react";
+
+function BciLogo({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-label="BCI Logo">
+      <rect x="18" y="14" width="64" height="8" rx="2" fill="#e91e8c" />
+      <rect x="18" y="14" width="8" height="72" rx="2" fill="#e91e8c" />
+      <rect x="28" y="26" width="46" height="8" rx="2" fill="#e91e8c" />
+      <rect x="28" y="26" width="8" height="54" rx="2" fill="#e91e8c" />
+      <rect x="38" y="38" width="28" height="8" rx="2" fill="#e91e8c" />
+      <rect x="38" y="38" width="8" height="34" rx="2" fill="#e91e8c" />
+      <rect x="72" y="14" width="8" height="72" rx="2" fill="#e91e8c" />
+    </svg>
+  );
+}
 
 const roles = [
   {
@@ -39,8 +52,8 @@ export default function LoginPage() {
       <nav className="sticky top-0 z-50 border-b border-white/10 bg-bci-dark/95 px-6 py-4 backdrop-blur lg:px-12">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="relative h-10 w-10 overflow-hidden rounded-xl bg-white/10">
-              <Image src="/logo.png" alt="BCI Logo" fill className="object-contain p-1" />
+            <div className="h-10 w-10 rounded-xl bg-white/10 p-1.5">
+              <BciLogo className="h-full w-full" />
             </div>
             <div>
               <p className="text-sm font-extrabold text-white">Bankeiros da Zunga</p>
