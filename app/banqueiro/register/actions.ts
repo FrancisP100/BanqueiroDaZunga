@@ -1,9 +1,11 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
+
+const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function registerProfile(
   _prevState: { error: string } | null,
@@ -13,29 +15,36 @@ export async function registerProfile(
     redirect("/login");
   }
 
-  const email = String(formData.get("email") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
-  const role = String(formData.get("papel") ?? "banqueiro");
-  const nome = String(formData.get("nome") ?? "").trim();
-  const codigoInterno = String(formData.get("codigo_interno") ?? "").trim();
-  const telefone = String(formData.get("telefone") ?? "").trim();
-  const provincia = String(formData.get("provincia") ?? "").trim();
-  const localIdRaw = String(formData.get("local_id") ?? "").trim();
-  // Aceitar apenas UUIDs válidos (formato: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  const localId = uuidRegex.test(localIdRaw) ? localIdRaw : "";
+  const email        = String(formData.get("email")          ?? "").trim();
+  const password     = String(formData.get("password")       ?? "");
+  const role         = String(formData.get("papel")          ?? "banqueiro");
+  const nome         = String(formData.get("nome")           ?? "").trim();
+  const codigoInterno= String(formData.get("codigo_interno") ?? "").trim();
+  const telefone     = String(formData.get("telefone")       ?? "").trim();
+  const provincia    = String(formData.get("provincia")      ?? "").trim();
+  const localIdRaw   = String(formData.get("local_id")       ?? "").trim();
+  const localId      = uuidRegex.test(localIdRaw) ? localIdRaw : null;
 
   // Validações
-  if (!email) return { error: "O email é obrigatório." };
-  if (!password) return { error: "A senha é obrigatória." };
+  if (!email)          return { error: "O email é obrigatório." };
+  if (!password)       return { error: "A senha é obrigatória." };
   if (password.length < 6) return { error: "A senha deve ter pelo menos 6 caracteres." };
-  if (!nome) return { error: "O nome é obrigatório." };
-  if (!codigoInterno) return { error: "O código interno é obrigatório." };
+  if (!nome)           return { error: "O nome é obrigatório." };
+  if (!codigoInterno)  return { error: "O código interno é obrigatório." };
 
-  const supabase = await createClient();
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  // Admin client (service role) bypassa RLS e confirma email directamente
+  // Fallback para anon key se service role não estiver configurada
+  const adminClient = serviceKey
+    ? createSupabaseClient(supabaseUrl, serviceKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      })
+    : await createClient();
 
   // Verificar se código interno já existe
-  const { data: existing } = await supabase
+  const { data: existing } = await adminClient
     .from("profiles")
     .select("id")
     .eq("codigo_interno", codigoInterno)
@@ -45,23 +54,17 @@ export async function registerProfile(
     return { error: `O código interno "${codigoInterno}" já está em uso.` };
   }
 
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-
+  // Criar utilizador
   let userId: string;
 
   if (serviceKey) {
-    // Caminho preferencial: usar admin API com service role
-    const adminClient = createSupabaseAdmin(supabaseUrl, serviceKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
-
-    const { data: userData, error: createError } = await adminClient.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { papel: role },
-    });
+    const { data: userData, error: createError } =
+      await adminClient.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: { papel: role },
+      });
 
     if (createError) {
       if (createError.message.toLowerCase().includes("already")) {
@@ -75,27 +78,10 @@ export async function registerProfile(
     }
 
     userId = userData.user.id;
-
-    // Inserir perfil
-    const { error: profileError } = await supabase.from("profiles").insert({
-      id: userId,
-      email,
-      nome,
-      codigo_interno: codigoInterno,
-      papel: role,
-      telefone: telefone || null,
-      provincia: provincia || null,
-      local_id: localId || null,
-      ativo: true,
-    });
-
-    if (profileError) {
-      await adminClient.auth.admin.deleteUser(userId).catch(() => {});
-      return { error: "Erro ao guardar o perfil: " + profileError.message };
-    }
   } else {
-    // Fallback: usar signUp com anon key (requer confirmação de email desactivada)
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+    // Fallback com anon key — requer confirmação de email desactivada no Supabase
+    const anonClient = await createClient();
+    const { data: signUpData, error: signUpError } = await anonClient.auth.signUp({
       email,
       password,
       options: { data: { papel: role } },
@@ -113,22 +99,28 @@ export async function registerProfile(
     }
 
     userId = signUpData.user.id;
+  }
 
-    const { error: profileError } = await supabase.from("profiles").insert({
-      id: userId,
-      email,
-      nome,
-      codigo_interno: codigoInterno,
-      papel: role,
-      telefone: telefone || null,
-      provincia: provincia || null,
-      local_id: localId || null,
-      ativo: true,
-    });
+  // Inserir perfil — admin client bypassa RLS
+  const { error: profileError } = await adminClient.from("profiles").insert({
+    id: userId,
+    email,
+    nome,
+    codigo_interno: codigoInterno,
+    papel: role,
+    telefone: telefone || null,
+    provincia: provincia || null,
+    local_id: localId,
+    ativo: true,
+  });
 
-    if (profileError) {
-      return { error: "Erro ao guardar o perfil: " + profileError.message };
+  if (profileError) {
+    // Limpar utilizador auth para evitar contas órfãs
+    if (serviceKey) {
+      await (adminClient as ReturnType<typeof createSupabaseClient>)
+        .auth.admin.deleteUser(userId).catch(() => {});
     }
+    return { error: "Erro ao guardar o perfil: " + profileError.message };
   }
 
   redirect("/login");
