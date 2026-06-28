@@ -32,8 +32,8 @@ export default async function BanqueiroRegisterPage() {
         <div className="mt-6 text-sm text-bci-muted">
           <p>
             Ja tem uma conta?{" "}
-            <Link href="/onboarding" className="font-bold text-bci-pink">
-              Voltar
+            <Link href="/banqueiro/login" className="font-bold text-bci-pink">
+              Entrar
             </Link>
           </p>
         </div>
