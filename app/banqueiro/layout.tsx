@@ -15,6 +15,11 @@ export default function BanqueiroLayout({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+
+  // Não aplicar layout nas páginas de login/register
+  if (pathname === '/banqueiro/login' || pathname === '/banqueiro/register') {
+    return <>{children}</>;
+  }
   
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
