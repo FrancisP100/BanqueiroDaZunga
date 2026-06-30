@@ -21,33 +21,40 @@ export default function InspecionarBanqueiro() {
 
   useEffect(() => {
     async function load() {
-      if (!id) return;
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("*, markets(nome, provincia)")
-        .eq("id", id)
-        .single();
-      setBanqueiro(profile);
+      try {
+        if (!id) {
+          setBanqueiro(null);
+          setLoading(false);
+          return;
+        }
 
-      const { data: pres } = await supabase
-        .from("presences")
-        .select("*")
-        .eq("profile_id", id)
-        .order("data", { ascending: false })
-        .limit(30);
-      setPresencas(pres ?? []);
+        const [{ data: profile, error: profileError }, { data: pres, error: presError }, { data: accs, error: accsError }] = await Promise.all([
+          supabase.from("profiles").select("*, markets(nome, provincia)").eq("id", id).single(),
+          supabase.from("presences").select("*").eq("profile_id", id).order("data", { ascending: false }).limit(30),
+          supabase.from("accounts").select("id, pacote, status, tpa_status, created_at, hora_abertura, clientes(nome, bi)").eq("banqueiro_id", id).order("created_at", { ascending: false }),
+        ]);
 
-      const { data: accs } = await supabase
-        .from("accounts")
-        .select(
-          "id, pacote, status, tpa_status, created_at, hora_abertura, clientes(nome, bi)",
-        )
-        .eq("banqueiro_id", id)
-        .order("created_at", { ascending: false });
-      setContas(accs ?? []);
-      setClientes((accs ?? []).map((a: any) => a.clientes).filter(Boolean));
-      setLoading(false);
+        if (profileError) {
+          console.error("Erro ao carregar banqueiro", profileError);
+        }
+        if (presError) {
+          console.error("Erro ao carregar presenças", presError);
+        }
+        if (accsError) {
+          console.error("Erro ao carregar contas", accsError);
+        }
+
+        setBanqueiro(profile ?? null);
+        setPresencas(pres ?? []);
+        setContas(accs ?? []);
+        setClientes((accs ?? []).map((a: any) => a.clientes).filter(Boolean));
+      } catch (error) {
+        console.error("Erro inesperado ao carregar inspeção do banqueiro", error);
+      } finally {
+        setLoading(false);
+      }
     }
+
     load();
   }, [id]);
 
