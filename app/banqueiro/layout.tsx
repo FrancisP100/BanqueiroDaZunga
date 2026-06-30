@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
-import { LayoutDashboard, Users, UserPlus, LogOut, Menu, X, MapPin } from 'lucide-react';
-import Image from 'next/image';
+import { LayoutDashboard, Users, UserPlus, LogOut, Menu, X } from 'lucide-react';
+import { BciLogo } from '@/components/ui/bci-logo';
 
 export default function BanqueiroLayout({
   children,
@@ -16,11 +16,7 @@ export default function BanqueiroLayout({
   const pathname = usePathname();
   const router = useRouter();
 
-  // Não aplicar layout nas páginas de login/register
-  if (pathname === '/banqueiro/login' || pathname === '/banqueiro/register') {
-    return <>{children}</>;
-  }
-  
+  // Supabase client must be created before any conditional returns (React hooks rules)
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -31,21 +27,33 @@ export default function BanqueiroLayout({
     router.push('/login');
   };
 
+  // Não aplicar layout nas páginas de login/register
+  if (pathname === '/banqueiro/login' || pathname === '/banqueiro/register') {
+    return <>{children}</>;
+  }
+
   const navItems = [
     { name: 'Dashboard', href: '/banqueiro', icon: LayoutDashboard },
     { name: 'Abrir Conta', href: '/banqueiro/abrir-conta', icon: UserPlus },
     { name: 'Meus Clientes', href: '/banqueiro/clientes', icon: Users },
   ];
 
+
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar - Desktop */}
       <aside className="hidden md:flex flex-col w-64 bg-bci-dark text-white fixed h-full z-10">
-        <div className="p-6 border-b border-white/10">
-          <div className="relative w-full h-12 mb-2">
-             <Image src="/logo.png" alt="BCI Logo" fill className="object-contain object-left" />
+          <div className="p-6 border-b border-white/10">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="h-10 w-10 rounded-xl bg-white/10 p-1.5 flex-shrink-0">
+              <BciLogo className="h-full w-full" />
+            </div>
+            <div>
+              <p className="text-sm font-extrabold text-white leading-tight">Bankeiros da Zunga</p>
+              <p className="text-[10px] font-semibold text-white/50 uppercase tracking-widest">BCI</p>
+            </div>
           </div>
-          <p className="text-sm text-white/70">Banqueiro da Zumba</p>
+          <p className="text-sm text-white/70 mt-2">Bankeiro da Zunga</p>
         </div>
         
         <nav className="flex-1 px-4 py-6 space-y-2">
@@ -81,10 +89,9 @@ export default function BanqueiroLayout({
         </div>
       </aside>
 
-      {/* Mobile Header */}
       <div className="md:hidden fixed top-0 w-full bg-bci-dark text-white z-20 flex items-center justify-between p-4 shadow-md">
-        <div className="relative w-24 h-8">
-           <Image src="/logo.png" alt="BCI Logo" fill className="object-contain object-left" />
+        <div className="h-9 w-9 rounded-xl bg-white/10 p-1.5">
+          <BciLogo className="h-full w-full" />
         </div>
         <button onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
           {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}

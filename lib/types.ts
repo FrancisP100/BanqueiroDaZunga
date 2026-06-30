@@ -1,4 +1,4 @@
-export type UserRole = "banqueiro" | "chefe" | "admin";
+export type UserRole = "banqueiro" | "chefe" | "admin"; // "chefe" continua no DB; UI mostra "Líder"
 
 export type Profile = {
   id: string;
@@ -23,19 +23,28 @@ export type Market = {
   raioMetros: number;
 };
 
+export const PACOTES = ["Mãezinha", "Mãe", "Mãe Grande"] as const;
+export type Pacote = (typeof PACOTES)[number];
+
+export type TpaStatus = "pendente" | "entregue" | "sem_tpa" | "por_entregar";
+
 export type Account = {
   id: string;
   createdAt: string;
+  horaAbertura?: string;
   banqueiroId: string;
   banqueiroNome: string;
+  clienteId: string;
   clienteNome: string;
   bi: string;
+  biEmissao?: string;
+  biValidade?: string;
   telefone: string;
   celular?: string;
   endereco?: string;
-  pacote: string;
-  pacoteStatus: "ativo" | "por_abrir";
-  tpaStatus: "entregue" | "por_entregar" | "sem_tpa";
+  pacote: Pacote | string;
+  pacoteStatus?: string;
+  tpaStatus: TpaStatus;
   mercadoId: string;
   mercadoNome: string;
   status: "aberta" | "pendente";
@@ -63,4 +72,14 @@ export type Presence = {
 export type PunctualityRule = {
   horaLimite: string;
   toleranciaMin: number;
+};
+
+export type ReportPeriod = "dia" | "semana" | "mes" | "ano";
+
+export type ReportSummary = {
+  periodo: ReportPeriod;
+  contasAbertas: number;
+  pacotesVendidos: number;
+  tpasEntregues: number;
+  tpasPendentes: number;
 };

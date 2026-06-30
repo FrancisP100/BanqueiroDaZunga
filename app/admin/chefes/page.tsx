@@ -11,26 +11,26 @@ export default async function AdminChefesPage() {
 
   return (
     <AppShell
-      title="Cadastro de Chefes"
-      eyebrow="Novo chefe"
+      title="Cadastro de Líderes"
+      eyebrow="Novo líder"
       userName={admin.nome}
       userMeta={admin.codigoInterno}
       navItems={[
         { href: "/admin", label: "Visao geral", icon: Home },
-        { href: "/admin/banqueiros", label: "Banqueiros", icon: Users },
-        { href: "/admin/chefes", label: "Chefes", icon: Building2 },
+        { href: "/admin/banqueiros", label: "Bankeiros", icon: Users },
+        { href: "/admin/chefes", label: "Líderes", icon: Building2 },
         { href: "/admin/mercados", label: "Mercados", icon: Store },
       ]}
     >
       <section className="grid gap-6 xl:grid-cols-[1.23fr_0.77fr]">
         <div>
           <h2 className="mb-3 text-xl font-extrabold text-bci-ink">
-            Cadastrar um novo chefe
+            Cadastrar um novo líder
           </h2>
           <ProfileForm
             role="chefe"
-            title="Dados do chefe"
-            description="Registe um chefe para gerir presencas e acompanhar o desempenho dos banqueiros."
+            title="Dados do líder"
+            description="Registe um líder para gerir presencas e acompanhar o desempenho dos banqueiros."
             action={registerProfile}
           />
         </div>
@@ -38,7 +38,7 @@ export default async function AdminChefesPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm uppercase tracking-[0.2em] text-bci-pink">
-                Chefes
+                Líderes
               </p>
               <h3 className="mt-2 text-2xl font-extrabold text-bci-ink">
                 {chefes.length} ativos

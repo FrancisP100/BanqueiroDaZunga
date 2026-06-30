@@ -34,11 +34,11 @@ export function PresenceForm({ market }: { market: Market }) {
         Obter localizacao GPS
       </button>
       <form
-        action={(formData) => {
+        action={async (formData) => {
           if (!coords) return;
           formData.set("latitude", String(coords.latitude));
           formData.set("longitude", String(coords.longitude));
-          startTransition(() => registerPresence(formData));
+          startTransition(async () => { await registerPresence(formData); });
         }}
       >
         <input type="hidden" name="mercado_id" value={market.id} />

@@ -10,7 +10,7 @@ export default async function BanqueiroRegisterPage() {
       <div className="mx-auto max-w-4xl">
         <section className="mb-10 rounded-3xl bg-white p-8 shadow-card">
           <p className="text-sm font-extrabold uppercase tracking-[0.2em] text-bci-pink">
-            Registo de Banqueiro
+            Registo de Bankeiro
           </p>
           <h1 className="mt-4 text-4xl font-extrabold text-bci-ink">
             Junte-se ao programa

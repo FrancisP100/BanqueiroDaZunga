@@ -14,13 +14,13 @@ export default async function AdminBanqueirosPage() {
 
   return (
     <AppShell
-      title="Cadastro de Banqueiros"
+      title="Cadastro de Bankeiros"
       eyebrow="Novo banqueiro"
       userName={admin.nome}
       userMeta={admin.codigoInterno}
       navItems={[
         { href: "/admin", label: "Visao geral", icon: Home },
-        { href: "/admin/banqueiros", label: "Banqueiros", icon: Users },
+        { href: "/admin/banqueiros", label: "Bankeiros", icon: Users },
         { href: "/admin/chefes", label: "Chefes", icon: Building2 },
         { href: "/admin/mercados", label: "Mercados", icon: Store },
       ]}
@@ -43,7 +43,7 @@ export default async function AdminBanqueirosPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm uppercase tracking-[0.2em] text-bci-pink">
-                Banqueiros
+                Bankeiros
               </p>
               <h3 className="mt-2 text-2xl font-extrabold text-bci-ink">
                 {banqueiros.length} ativos

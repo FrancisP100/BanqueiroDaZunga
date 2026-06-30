@@ -1,24 +1,13 @@
 import Link from "next/link";
 import { ShieldCheck, UserRound, UsersRound, ArrowRight } from "lucide-react";
+import { BciLogo } from "@/components/ui/bci-logo";
 
-function BciLogo({ className = "" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-label="BCI Logo">
-      <rect x="18" y="14" width="64" height="8" rx="2" fill="#e91e8c" />
-      <rect x="18" y="14" width="8" height="72" rx="2" fill="#e91e8c" />
-      <rect x="28" y="26" width="46" height="8" rx="2" fill="#e91e8c" />
-      <rect x="28" y="26" width="8" height="54" rx="2" fill="#e91e8c" />
-      <rect x="38" y="38" width="28" height="8" rx="2" fill="#e91e8c" />
-      <rect x="38" y="38" width="8" height="34" rx="2" fill="#e91e8c" />
-      <rect x="72" y="14" width="8" height="72" rx="2" fill="#e91e8c" />
-    </svg>
-  );
-}
+
 
 const roles = [
   {
     href: "/banqueiro/login",
-    title: "Banqueiro",
+    title: "Bankeiro",
     subtitle: "Abertura de contas, presença GPS e histórico diário.",
     icon: UserRound,
     accent: "text-bci-pink",
@@ -27,7 +16,7 @@ const roles = [
   },
   {
     href: "/chefe/login",
-    title: "Chefe",
+    title: "Líder",
     subtitle: "Mapa de presenças, faltas e correcção manual.",
     icon: UsersRound,
     accent: "text-bci-blue",

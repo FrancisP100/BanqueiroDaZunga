@@ -52,7 +52,7 @@ export default function ChefeLoginPage() {
         if (profileError) throw profileError;
 
         if (profileData.papel !== "chefe") {
-          setError("Acesso negado. Esta área é apenas para chefes.");
+          setError("Acesso negado. Esta área é apenas para líderes.");
           await supabase.auth.signOut();
           return;
         }
@@ -72,7 +72,7 @@ export default function ChefeLoginPage() {
         <div className="bg-bci-blue p-6 flex flex-col items-center justify-center text-white">
           <UsersRound size={48} className="mb-2" />
           <h1 className="text-2xl font-bold">Banco de Comércio e Indústria</h1>
-          <p className="text-white/80">Área do Chefe</p>
+          <p className="text-white/80">Área do Líder</p>
         </div>
 
         <div className="p-8">
@@ -85,7 +85,7 @@ export default function ChefeLoginPage() {
           </Link>
 
           <h2 className="text-2xl font-semibold text-gray-800 mb-6 text-center">
-            Iniciar Sessão como Chefe
+            Iniciar Sessão como Líder
           </h2>
 
           {error && (

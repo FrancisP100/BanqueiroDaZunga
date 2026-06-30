@@ -182,7 +182,7 @@ export default function PresencasPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Banqueiros', value: banqueiros.length, icon: Users,        color: 'text-bci-blue bg-bci-blueSoft' },
+          { label: 'Total Bankeiros', value: banqueiros.length, icon: Users,        color: 'text-bci-blue bg-bci-blueSoft' },
           { label: 'Presentes',        value: presentCount,      icon: CheckCircle,  color: 'text-emerald-600 bg-emerald-50' },
           { label: 'Atrasos',          value: lateCount,         icon: Clock,        color: 'text-amber-600 bg-amber-50' },
           { label: 'Faltas / Sem reg', value: absentCount,       icon: XCircle,      color: 'text-red-600 bg-red-50' },
@@ -263,7 +263,7 @@ export default function PresencasPage() {
               Sem Registo ({noRecord.length})
             </h2>
             <p className="mt-0.5 text-xs text-bci-muted">
-              Banqueiros sem presença registada para {date}.
+              Bankeiros sem presença registada para {date}.
             </p>
           </div>
           <div className="overflow-x-auto">

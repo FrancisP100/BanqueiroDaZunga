@@ -31,13 +31,13 @@ export default async function AdminDashboard() {
         </div>
         <div className="rounded-2xl border border-bci-line bg-white p-5 shadow-card">
           <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-bci-muted">
-            Banqueiros
+            Bankeiros
           </p>
           <p className="mt-2 text-3xl font-extrabold text-bci-ink">{banqueiros.length}</p>
         </div>
         <div className="rounded-2xl border border-bci-line bg-white p-5 shadow-card">
           <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-bci-muted">
-            Chefes
+            Líderes
           </p>
           <p className="mt-2 text-3xl font-extrabold text-bci-ink">{chefes.length}</p>
         </div>
@@ -55,7 +55,7 @@ export default async function AdminDashboard() {
               <Users size={22} />
             </div>
             <div>
-              <p className="font-extrabold text-bci-ink">Gerir Banqueiros</p>
+              <p className="font-extrabold text-bci-ink">Gerir Bankeiros</p>
               <p className="mt-0.5 text-xs text-bci-muted">
                 {banqueiros.length} registados
               </p>
@@ -70,7 +70,7 @@ export default async function AdminDashboard() {
               <UserCheck size={22} />
             </div>
             <div>
-              <p className="font-extrabold text-bci-ink">Gerir Chefes</p>
+              <p className="font-extrabold text-bci-ink">Gerir Líderes</p>
               <p className="mt-0.5 text-xs text-bci-muted">
                 {chefes.length} registados
               </p>

@@ -3,8 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
-import { classifyPunctuality, distanceInMeters } from "@/lib/attendance";
-import { nowHM, todayISO } from "@/lib/date";
 
 export async function createAccount(formData: FormData) {
   if (!hasSupabaseEnv()) return;
@@ -13,63 +11,157 @@ export async function createAccount(formData: FormData) {
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return;
 
-  const mercadoId = String(formData.get("mercado_id") ?? "");
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id, local_id")
+    .eq("id", auth.user.id)
+    .single();
+  if (!profile) return;
+
+  const bi = String(formData.get("bi") ?? "");
+  const nome = String(formData.get("cliente_nome") ?? "");
+  const telefone = String(formData.get("telefone") ?? "");
+  const endereco = String(formData.get("endereco") ?? "");
+  const biEmissao = String(formData.get("bi_emissao") ?? "") || null;
+  const biValidade = String(formData.get("bi_validade") ?? "") || null;
+  const pacote = String(formData.get("pacote") ?? "Mãezinha");
+  const mercadoId = String(
+    formData.get("mercado_id") ?? profile.local_id ?? "",
+  );
+
+  // 1. Upsert cliente (com dados do BI)
+  const { data: existingClient } = await supabase
+    .from("clientes")
+    .select("id")
+    .eq("bi", bi)
+    .maybeSingle();
+
+  let clienteId: string;
+  if (existingClient) {
+    clienteId = existingClient.id;
+    await supabase
+      .from("clientes")
+      .update({
+        nome,
+        telefone,
+        endereco,
+        bi_emissao: biEmissao,
+        bi_validade: biValidade,
+      })
+      .eq("id", clienteId);
+  } else {
+    const { data: novoCliente, error } = await supabase
+      .from("clientes")
+      .insert({
+        bi,
+        nome,
+        telefone,
+        endereco,
+        bi_emissao: biEmissao,
+        bi_validade: biValidade,
+      })
+      .select("id")
+      .single();
+    if (error || !novoCliente) return;
+    clienteId = novoCliente.id;
+  }
+
+  // 2. Criar conta — entra sempre como "pendente"
+  const agora = new Date();
   await supabase.from("accounts").insert({
-    banqueiro_id: auth.user.id,
-    cliente_nome: String(formData.get("cliente_nome") ?? ""),
-    bi: String(formData.get("bi") ?? ""),
-    telefone: String(formData.get("telefone") ?? ""),
-    pacote: String(formData.get("pacote") ?? ""),
-    mercado_id: mercadoId,
-    status: "aberta"
+    banqueiro_id: profile.id,
+    cliente_id: clienteId,
+    pacote,
+    mercado_id: mercadoId || null,
+    status: "pendente",
+    tpa_status: "pendente",
+    hora_abertura: agora.toTimeString().slice(0, 8),
   });
 
   revalidatePath("/banqueiro");
-  revalidatePath("/banqueiro/contas");
+  revalidatePath("/banqueiro/clientes");
 }
 
-export async function registerPresence(formData: FormData) {
-  if (!hasSupabaseEnv()) return;
+/** Só o banqueiro dono da conta pode passar de "pendente" para "aberta" */
+export async function ativarConta(accountId: string) {
+  if (!hasSupabaseEnv()) return { error: "Supabase não configurado" };
 
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) return;
+  if (!auth.user) return { error: "Não autenticado" };
 
-  const latitude = Number(formData.get("latitude"));
-  const longitude = Number(formData.get("longitude"));
+  const { data: account } = await supabase
+    .from("accounts")
+    .select("id, banqueiro_id, status")
+    .eq("id", accountId)
+    .single();
+
+  if (!account) return { error: "Conta não encontrada" };
+  if (account.banqueiro_id !== auth.user.id)
+    return { error: "Só o banqueiro responsável pode activar esta conta" };
+  if (account.status === "aberta") return {};
+
+  const { error } = await supabase
+    .from("accounts")
+    .update({ status: "aberta" })
+    .eq("id", accountId);
+  if (error) return { error: error.message };
+
+  revalidatePath("/banqueiro/clientes");
+  return {};
+}
+
+/** Banqueiro actualiza o estado do TPA */
+export async function atualizarTpaStatus(
+  accountId: string,
+  status: "pendente" | "entregue",
+) {
+  if (!hasSupabaseEnv()) return { error: "Supabase não configurado" };
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("accounts")
+    .update({ tpa_status: status })
+    .eq("id", accountId);
+  if (error) return { error: error.message };
+  revalidatePath("/banqueiro/clientes");
+  revalidatePath("/banqueiro");
+  return {};
+}
+
+/** Marcar presença por GPS */
+export async function registerPresence(formData: FormData) {
+  if (!hasSupabaseEnv()) return { error: "Supabase não configurado" };
+
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return { error: "Não autenticado" };
+
   const mercadoId = String(formData.get("mercado_id") ?? "");
-  const entrada = nowHM();
+  const latitude = parseFloat(String(formData.get("latitude") ?? "0"));
+  const longitude = parseFloat(String(formData.get("longitude") ?? "0"));
 
-  const [{ data: profile }, { data: market }, { data: settings }] = await Promise.all([
-    supabase.from("profiles").select("nome").eq("id", auth.user.id).single(),
-    supabase.from("markets").select("id,nome,latitude,longitude,raio_metros").eq("id", mercadoId).single(),
-    supabase.from("punctuality_settings").select("hora_limite,tolerancia_min").eq("id", true).single()
-  ]);
+  if (!mercadoId) return { error: "Mercado não especificado" };
 
-  if (!market || !settings) return;
+  const hoje = new Date().toISOString().slice(0, 10);
+  const agora = new Date().toTimeString().slice(0, 8);
 
-  const distance = distanceInMeters(
-    { latitude, longitude },
-    { latitude: Number(market.latitude), longitude: Number(market.longitude) }
+  const { error } = await supabase.from("presences").upsert(
+    {
+      profile_id: auth.user.id,
+      data: hoje,
+      entrada: agora,
+      latitude,
+      longitude,
+      mercado_id: mercadoId,
+      status: "no_local",
+      pontualidade: "no_horario",
+      origem: "gps",
+    },
+    { onConflict: "profile_id,data" },
   );
-  const status = distance <= Number(market.raio_metros) ? "no_local" : "fora_do_local";
-  const pontualidade = classifyPunctuality(entrada, {
-    horaLimite: String(settings.hora_limite).slice(0, 5),
-    toleranciaMin: Number(settings.tolerancia_min)
-  });
 
-  await supabase.from("presences").upsert({
-    profile_id: auth.user.id,
-    data: todayISO(),
-    entrada,
-    latitude,
-    longitude,
-    mercado_id: market.id,
-    status,
-    pontualidade,
-    origem: "gps"
-  }, { onConflict: "profile_id,data" });
+  if (error) return { error: error.message };
 
-  revalidatePath("/banqueiro/presenca");
-  revalidatePath("/chefe");
+  revalidatePath("/banqueiro");
+  return { success: true };
 }

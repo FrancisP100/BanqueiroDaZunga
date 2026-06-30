@@ -5,13 +5,13 @@ import { ShieldCheck, UserRound, UsersRound } from "lucide-react";
 const roles = [
   {
     href: "/banqueiro/register",
-    title: "Banqueiro",
+    title: "Bankeiro",
     subtitle: "Abertura de contas, presença GPS e histórico diário.",
     icon: UserRound,
   },
   {
     href: "/chefe/register",
-    title: "Chefe",
+    title: "Líder",
     subtitle: "Mapa de presenças, faltas e correcção manual.",
     icon: UsersRound,
   },

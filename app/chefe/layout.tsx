@@ -3,14 +3,15 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { createBrowserClient } from '@supabase/ssr';
 import { LayoutDashboard, ClipboardList, Users, LogOut, Menu, X } from 'lucide-react';
-import Image from 'next/image';
+import { BciLogo } from '@/components/ui/bci-logo';
 
 const navItems = [
   { name: 'Dashboard', href: '/chefe', icon: LayoutDashboard },
   { name: 'Presenças', href: '/chefe/presencas', icon: ClipboardList },
-  { name: 'Banqueiros', href: '/chefe/banqueiros', icon: Users },
+  { name: 'Bankeiros', href: '/chefe/banqueiros', icon: Users },
 ];
 
 export default function ChefeLayout({ children }: { children: React.ReactNode }) {
@@ -38,11 +39,17 @@ export default function ChefeLayout({ children }: { children: React.ReactNode })
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 bg-bci-dark text-white fixed h-full z-10">
         <div className="p-6 border-b border-white/10">
-          <div className="relative w-full h-12 mb-2">
-            <Image src="/logo.png" alt="BCI Logo" fill className="object-contain object-left" />
+          <div className="flex items-center gap-3 mb-1">
+            <div className="h-10 w-10 rounded-xl bg-white/10 p-1.5 flex-shrink-0">
+              <BciLogo className="h-full w-full" />
+            </div>
+            <div>
+              <p className="text-sm font-extrabold text-white leading-tight">Bankeiros da Zunga</p>
+              <p className="text-[10px] font-semibold text-white/50 uppercase tracking-widest">BCI</p>
+            </div>
           </div>
-          <p className="text-xs font-semibold text-white/60 uppercase tracking-widest mt-1">
-            Chefe de Zona
+          <p className="text-xs font-semibold text-white/60 uppercase tracking-widest mt-2">
+            Líder de Zona
           </p>
         </div>
 

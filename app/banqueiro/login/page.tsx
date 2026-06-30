@@ -77,7 +77,7 @@ export default function BanqueiroLoginPage() {
         <div className="bg-bci-magenta p-6 flex flex-col items-center justify-center text-white">
           <UserRound size={48} className="mb-2" />
           <h1 className="text-2xl font-bold">Banco de Comércio e Indústria</h1>
-          <p className="text-white/80">Área do Banqueiro</p>
+          <p className="text-white/80">Área do Bankeiro</p>
         </div>
 
         <div className="p-8">

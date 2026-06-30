@@ -1,24 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
-import { Users, MapPin } from 'lucide-react';
+import { PresenceBadge, PunctualityBadge } from '@/components/ui/status-badge';
+import { CreditCard, MapPin, Phone, Calendar } from 'lucide-react';
 
-type Banqueiro = {
-  id: string;
-  nome: string;
-  email: string;
-  codigoInterno: string;
-  telefone: string | null;
-  provincia: string | null;
-  mercadoNome: string | null;
-  ativo: boolean;
-};
-
-export default function ChefeBanqueirosPage() {
-  const [banqueiros, setBanqueiros] = useState<Banqueiro[]>([]);
+export default function InspecionarBanqueiro() {
+  const { id } = useParams<{ id: string }>();
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [banqueiro, setBanqueiro] = useState<any>(null);
+  const [presencas, setPresencas] = useState<any[]>([]);
+  const [contas, setContas] = useState<any[]>([]);
+  const [clientes, setClientes] = useState<any[]>([]);
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -27,124 +21,103 @@ export default function ChefeBanqueirosPage() {
 
   useEffect(() => {
     async function load() {
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, nome, email, codigo_interno, telefone, provincia, local_id, ativo')
-        .eq('papel', 'banqueiro')
-        .order('nome');
+      const { data: profile } = await supabase.from('profiles').select('*, markets(nome, provincia)').eq('id', id).single();
+      setBanqueiro(profile);
 
-      const { data: markets } = await supabase
-        .from('markets')
-        .select('id, nome');
+      const { data: pres } = await supabase.from('presences').select('*').eq('profile_id', id).order('data', { ascending: false }).limit(30);
+      setPresencas(pres ?? []);
 
-      const marketMap: Record<string, string> = {};
-      (markets ?? []).forEach((m: { id: string; nome: string }) => { marketMap[m.id] = m.nome; });
-
-      setBanqueiros(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (profiles ?? []).map((p: any) => ({
-          id: p.id,
-          nome: p.nome,
-          email: p.email,
-          codigoInterno: p.codigo_interno,
-          telefone: p.telefone,
-          provincia: p.provincia,
-          mercadoNome: p.local_id ? (marketMap[p.local_id] ?? null) : null,
-          ativo: p.ativo,
-        }))
-      );
+      const { data: accs } = await supabase
+        .from('accounts')
+        .select('id, pacote, status, tpa_status, created_at, hora_abertura, clientes(nome, bi)')
+        .eq('banqueiro_id', id)
+        .order('created_at', { ascending: false });
+      setContas(accs ?? []);
+      setClientes((accs ?? []).map((a: any) => a.clientes).filter(Boolean));
       setLoading(false);
     }
-    load();
-  }, []);
+    if (id) load();
+  }, [id]);
 
-  const filtered = banqueiros.filter(
-    (b) =>
-      b.nome.toLowerCase().includes(search.toLowerCase()) ||
-      b.codigoInterno.toLowerCase().includes(search.toLowerCase()) ||
-      (b.mercadoNome ?? '').toLowerCase().includes(search.toLowerCase())
-  );
+  if (loading) return <div className="py-20 text-center text-bci-muted">A carregar...</div>;
+  if (!banqueiro) return <div className="py-20 text-center text-bci-muted">Bankeiro não encontrado.</div>;
+
+  const contasAbertas = contas.filter((c) => c.status === 'aberta').length;
+  const contasPendentes = contas.filter((c) => c.status === 'pendente').length;
+  const tpaEntregues = contas.filter((c) => c.tpa_status === 'entregue').length;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-bci-blue/70">
-            Painel do Chefe
-          </p>
-          <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-bci-ink">
-            Banqueiros
-          </h1>
-        </div>
-        <div className="flex items-center gap-3 rounded-2xl border border-bci-line bg-white px-4 py-2 shadow-card">
-          <Users size={16} className="text-bci-muted" />
-          <span className="text-sm font-bold text-bci-ink">{banqueiros.length} registados</span>
+    <div className="space-y-8">
+      <div className="rounded-2xl border border-bci-line bg-white p-6 shadow-card">
+        <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-bci-blue/70">Inspecção de Bankeiro</p>
+        <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-bci-ink">{banqueiro.nome}</h1>
+        <div className="mt-3 flex flex-wrap gap-4 text-sm text-bci-muted">
+          <span className="flex items-center gap-1.5"><CreditCard size={14} /> {banqueiro.codigo_interno}</span>
+          <span className="flex items-center gap-1.5"><Phone size={14} /> {banqueiro.telefone ?? '—'}</span>
+          <span className="flex items-center gap-1.5"><MapPin size={14} /> {banqueiro.markets?.nome ?? '—'} · {banqueiro.provincia}</span>
         </div>
       </div>
 
-      {/* Search */}
-      <input
-        type="text"
-        placeholder="Pesquisar por nome, código ou mercado..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="w-full rounded-xl border border-bci-line bg-white px-4 py-3 text-sm font-medium outline-none focus:border-bci-blue focus:ring-4 focus:ring-blue-100 shadow-card"
-      />
-
-      {/* Table */}
-      <div className="rounded-2xl border border-bci-line bg-white shadow-card overflow-hidden">
-        {loading ? (
-          <p className="py-12 text-center text-sm text-bci-muted">A carregar banqueiros…</p>
-        ) : filtered.length === 0 ? (
-          <p className="py-12 text-center text-sm text-bci-muted">
-            {search ? 'Nenhum resultado para a pesquisa.' : 'Nenhum banqueiro registado.'}
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase text-bci-muted">
-                <tr>
-                  <th className="px-4 py-3">Nome</th>
-                  <th className="px-4 py-3">Código</th>
-                  <th className="px-4 py-3">Email</th>
-                  <th className="px-4 py-3">Telefone</th>
-                  <th className="px-4 py-3">Mercado</th>
-                  <th className="px-4 py-3">Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((b) => (
-                  <tr key={b.id} className="border-t border-bci-line hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3 font-bold text-bci-ink">{b.nome}</td>
-                    <td className="px-4 py-3 font-mono text-xs text-bci-muted">{b.codigoInterno}</td>
-                    <td className="px-4 py-3 text-bci-muted truncate max-w-[180px]">{b.email}</td>
-                    <td className="px-4 py-3 text-bci-muted">{b.telefone ?? '—'}</td>
-                    <td className="px-4 py-3">
-                      {b.mercadoNome ? (
-                        <span className="inline-flex items-center gap-1 text-bci-muted">
-                          <MapPin size={12} className="text-bci-blue" />
-                          {b.mercadoNome}
-                        </span>
-                      ) : (
-                        <span className="text-bci-muted">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`rounded-full px-2.5 py-1 text-xs font-extrabold ${
-                        b.ativo
-                          ? 'bg-emerald-50 text-emerald-700'
-                          : 'bg-red-50 text-red-600'
-                      }`}>
-                        {b.ativo ? 'Activo' : 'Inactivo'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'Contas Abertas', value: contasAbertas },
+          { label: 'Contas Pendentes', value: contasPendentes },
+          { label: "TPA's Entregues", value: tpaEntregues },
+          { label: 'Total de Clientes', value: clientes.length },
+        ].map(({ label, value }) => (
+          <div key={label} className="rounded-2xl border border-bci-line bg-white p-5 shadow-card">
+            <p className="text-2xl font-extrabold text-bci-ink">{value}</p>
+            <p className="mt-0.5 text-xs font-semibold text-bci-muted">{label}</p>
           </div>
-        )}
+        ))}
+      </div>
+
+      <div className="rounded-2xl border border-bci-line bg-white shadow-card overflow-hidden">
+        <div className="px-5 py-4 border-b border-bci-line flex items-center gap-2">
+          <Calendar size={16} className="text-bci-blue" />
+          <h2 className="font-extrabold text-bci-ink">Histórico de presenças (últimos 30 registos)</h2>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-slate-50 text-xs uppercase text-bci-muted">
+              <tr><th className="px-4 py-3">Data</th><th className="px-4 py-3">Entrada</th><th className="px-4 py-3">Saída</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Pontualidade</th></tr>
+            </thead>
+            <tbody>
+              {presencas.map((p) => (
+                <tr key={p.id} className="border-t border-bci-line">
+                  <td className="px-4 py-3 font-bold">{p.data}</td>
+                  <td className="px-4 py-3">{p.entrada ? String(p.entrada).slice(0,5) : '—'}</td>
+                  <td className="px-4 py-3">{p.saida ? String(p.saida).slice(0,5) : '—'}</td>
+                  <td className="px-4 py-3"><PresenceBadge value={p.status} /></td>
+                  <td className="px-4 py-3"><PunctualityBadge value={p.pontualidade} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-bci-line bg-white shadow-card overflow-hidden">
+        <div className="px-5 py-4 border-b border-bci-line"><h2 className="font-extrabold text-bci-ink">Clientes cadastrados</h2></div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-slate-50 text-xs uppercase text-bci-muted">
+              <tr><th className="px-4 py-3">Cliente</th><th className="px-4 py-3">BI</th><th className="px-4 py-3">Pacote</th><th className="px-4 py-3">Estado</th><th className="px-4 py-3">TPA</th><th className="px-4 py-3">Data</th></tr>
+            </thead>
+            <tbody>
+              {contas.map((c) => (
+                <tr key={c.id} className="border-t border-bci-line">
+                  <td className="px-4 py-3 font-bold">{c.clientes?.nome}</td>
+                  <td className="px-4 py-3 text-bci-muted">{c.clientes?.bi}</td>
+                  <td className="px-4 py-3">{c.pacote}</td>
+                  <td className="px-4 py-3 capitalize">{c.status}</td>
+                  <td className="px-4 py-3 capitalize">{c.tpa_status}</td>
+                  <td className="px-4 py-3 text-bci-muted">{new Date(c.created_at).toLocaleDateString()} {c.hora_abertura ? String(c.hora_abertura).slice(0,5) : ''}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

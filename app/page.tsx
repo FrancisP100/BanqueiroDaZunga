@@ -1,51 +1,9 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowRight } from "lucide-react";
+import { BciLogo } from "@/components/ui/bci-logo";
 
-/** Logo BCI inline — não depende de ficheiro externo */
-function BciLogo({ className = "" }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 100 100"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-      aria-label="BCI Logo"
-    >
-      {/* Símbolo geométrico BCI — três rectângulos aninhados + pilar direito */}
-      <rect x="18" y="14" width="64" height="8" rx="2" fill="#e91e8c" />
-      <rect x="18" y="14" width="8" height="72" rx="2" fill="#e91e8c" />
-      <rect x="28" y="26" width="46" height="8" rx="2" fill="#e91e8c" />
-      <rect x="28" y="26" width="8" height="54" rx="2" fill="#e91e8c" />
-      <rect x="38" y="38" width="28" height="8" rx="2" fill="#e91e8c" />
-      <rect x="38" y="38" width="8" height="34" rx="2" fill="#e91e8c" />
-      <rect x="72" y="14" width="8" height="72" rx="2" fill="#e91e8c" />
-    </svg>
-  );
-}
 
-/** Padrão geométrico BCI para fundo hero — replica o briefing */
-function HeroPattern() {
-  return (
-    <svg
-      viewBox="0 0 600 400"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className="absolute inset-0 h-full w-full"
-      preserveAspectRatio="xMidYMid slice"
-      aria-hidden="true"
-    >
-      {/* 3 rectângulos concêntricos abertos — lado direito */}
-      <rect x="180" y="20" width="400" height="16" rx="4" fill="#e91e8c" opacity="0.9" />
-      <rect x="180" y="20" width="16" height="360" rx="4" fill="#e91e8c" opacity="0.9" />
-      <rect x="230" y="60" width="350" height="16" rx="4" fill="#e91e8c" opacity="0.9" />
-      <rect x="230" y="60" width="16" height="300" rx="4" fill="#e91e8c" opacity="0.9" />
-      <rect x="280" y="100" width="300" height="16" rx="4" fill="#e91e8c" opacity="0.9" />
-      <rect x="280" y="100" width="16" height="240" rx="4" fill="#e91e8c" opacity="0.9" />
-      {/* Pilar direito */}
-      <rect x="564" y="20" width="16" height="360" rx="4" fill="#e91e8c" opacity="0.9" />
-    </svg>
-  );
-}
 
 export default function HomePage() {
   return (
@@ -73,10 +31,16 @@ export default function HomePage() {
 
       {/* Hero */}
       <section className="relative flex min-h-[88vh] items-center overflow-hidden px-6 lg:px-12">
-        {/* Fundo verde escuro com padrão geométrico rosa */}
-        <HeroPattern />
-        {/* Gradiente para legibilidade do texto */}
-        <div className="absolute inset-0 bg-gradient-to-r from-bci-dark via-bci-dark/90 to-bci-dark/30" />
+        <div className="absolute inset-0">
+          <Image
+            src="/hero-bg.png"
+            alt=""
+            fill
+            className="object-cover object-right opacity-80"
+            priority
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-bci-dark via-bci-dark/90 to-bci-dark/30" />
+        </div>
 
         <div className="relative z-10 mx-auto max-w-7xl w-full">
           <div className="max-w-2xl">

@@ -5,11 +5,11 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import { LayoutDashboard, Users, UserCheck, Store, LogOut, Menu, X } from 'lucide-react';
-import Image from 'next/image';
+import { BciLogo } from '@/components/ui/bci-logo';
 
 const navItems = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-  { name: 'Banqueiros', href: '/admin/banqueiros', icon: Users },
+  { name: 'Bankeiros', href: '/admin/banqueiros', icon: Users },
   { name: 'Chefes', href: '/admin/chefes', icon: UserCheck },
   { name: 'Mercados', href: '/admin/mercados', icon: Store },
 ];
@@ -37,10 +37,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 bg-bci-navy text-white fixed h-full z-10">
         <div className="p-6 border-b border-white/10">
-          <div className="relative w-full h-12 mb-2">
-            <Image src="/logo.png" alt="BCI Logo" fill className="object-contain object-left" />
+          <div className="flex items-center gap-3 mb-1">
+            <div className="h-10 w-10 rounded-xl bg-white/10 p-1.5 flex-shrink-0">
+              <BciLogo className="h-full w-full" />
+            </div>
+            <div>
+              <p className="text-sm font-extrabold text-white leading-tight">Bankeiros da Zunga</p>
+              <p className="text-[10px] font-semibold text-white/50 uppercase tracking-widest">BCI</p>
+            </div>
           </div>
-          <p className="text-xs font-semibold text-white/60 uppercase tracking-widest mt-1">
+          <p className="text-xs font-semibold text-white/60 uppercase tracking-widest mt-2">
             Administração
           </p>
         </div>
@@ -77,10 +83,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </aside>
 
-      {/* Mobile Header */}
       <div className="md:hidden fixed top-0 w-full bg-bci-navy text-white z-20 flex items-center justify-between p-4 shadow-md">
-        <div className="relative w-24 h-8">
-          <Image src="/logo.png" alt="BCI Logo" fill className="object-contain object-left" />
+        <div className="h-9 w-9 rounded-xl bg-white/10 p-1.5">
+          <BciLogo className="h-full w-full" />
         </div>
         <button onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
           {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}

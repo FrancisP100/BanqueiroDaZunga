@@ -51,6 +51,7 @@ export async function getMvpData() {
     createdAt: row.created_at,
     banqueiroId: row.banqueiro_id,
     banqueiroNome: row.profiles?.nome ?? "",
+    clienteId: row.cliente_id ?? `CLI-${row.id.substring(0,4)}`,
     clienteNome: row.cliente_nome,
     bi: row.bi,
     telefone: row.telefone,
