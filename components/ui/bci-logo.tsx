@@ -2,7 +2,7 @@ export function BciLogo({ className = "" }: { className?: string }) {
   return (
     <div className={`relative overflow-hidden ${className}`}>
       <img
-        src="/logo.png"
+        src="/logo1.png"
         alt="BCI Logo"
         className="h-full w-full object-contain"
         loading="eager"
