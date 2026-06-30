@@ -88,7 +88,7 @@ export default function ChefeLayout({ children }: { children: React.ReactNode })
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 w-full bg-bci-dark text-white z-20 flex items-center justify-between p-4 shadow-md">
         <div className="relative w-24 h-8">
-          <Image src="/logo.png" alt="BCI Logo" fill className="object-contain object-left" />
+          <Image src="/Logo1.png" alt="BCI Logo" fill className="object-contain object-left" />
         </div>
         <button onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
           {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
