@@ -1,30 +1,26 @@
-import { Building2, Home, Store, Users } from "lucide-react";
-import { AppShell } from "@/components/layout/app-shell";
+import { Users } from "lucide-react";
 import { ProfileForm } from "@/components/profile-form";
 import { getMvpData } from "@/lib/data";
 import { registerProfile } from "@/app/admin/actions";
 
 export default async function AdminBanqueirosPage() {
   const { markets, profiles } = await getMvpData();
-  const admin = profiles.find((profile) => profile.papel === "admin")!;
   const banqueiros = profiles.filter(
     (profile) => profile.papel === "banqueiro",
   );
   const marketMap = new Map(markets.map((market) => [market.id, market.nome]));
 
   return (
-    <AppShell
-      title="Cadastro de Bankeiros"
-      eyebrow="Novo banqueiro"
-      userName={admin.nome}
-      userMeta={admin.codigoInterno}
-      navItems={[
-        { href: "/admin", label: "Visao geral", icon: Home },
-        { href: "/admin/banqueiros", label: "Bankeiros", icon: Users },
-        { href: "/admin/chefes", label: "Chefes", icon: Building2 },
-        { href: "/admin/mercados", label: "Mercados", icon: Store },
-      ]}
-    >
+    <div className="space-y-8">
+      <div>
+        <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-bci-navy/60">
+          Gestão
+        </p>
+        <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-bci-ink">
+          Bankeiros
+        </h1>
+      </div>
+
       <section className="grid gap-6 xl:grid-cols-[1.23fr_0.77fr]">
         <div>
           <h2 className="mb-3 text-xl font-extrabold text-bci-ink">
@@ -33,49 +29,60 @@ export default async function AdminBanqueirosPage() {
           <ProfileForm
             role="banqueiro"
             title="Dados do banqueiro"
-            description="Use este formulario para registar um novo banqueiro e associar um mercado local, se aplicavel."
+            description="Use este formulário para registar um novo banqueiro e associar um mercado local, se aplicável."
             showMarket
             markets={markets}
             action={registerProfile}
           />
         </div>
+
         <div className="rounded-2xl border border-bci-line bg-white p-5 shadow-card">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-bci-navySoft text-bci-navy">
+              <Users size={18} />
+            </div>
             <div>
-              <p className="text-sm uppercase tracking-[0.2em] text-bci-pink">
+              <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-bci-muted">
                 Bankeiros
               </p>
-              <h3 className="mt-2 text-2xl font-extrabold text-bci-ink">
-                {banqueiros.length} ativos
-              </h3>
+              <p className="text-2xl font-extrabold text-bci-ink">
+                {banqueiros.length} registados
+              </p>
             </div>
           </div>
-          <div className="mt-6 overflow-hidden rounded-2xl border border-bci-line">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase text-bci-muted">
-                <tr>
-                  <th className="px-4 py-3">Nome</th>
-                  <th className="px-4 py-3">Codigo</th>
-                  <th className="px-4 py-3">Mercado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {banqueiros.map((profile) => (
-                  <tr key={profile.id} className="border-t border-bci-line">
-                    <td className="px-4 py-3 font-bold">{profile.nome}</td>
-                    <td className="px-4 py-3">{profile.codigoInterno}</td>
-                    <td className="px-4 py-3">
-                      {profile.localId
-                        ? (marketMap.get(profile.localId) ?? profile.localId)
-                        : "-"}
-                    </td>
+
+          {banqueiros.length === 0 ? (
+            <p className="py-8 text-center text-sm text-bci-muted">
+              Nenhum banqueiro registado ainda.
+            </p>
+          ) : (
+            <div className="overflow-hidden rounded-2xl border border-bci-line">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-50 text-xs uppercase text-bci-muted">
+                  <tr>
+                    <th className="px-4 py-3">Nome</th>
+                    <th className="px-4 py-3">Código</th>
+                    <th className="px-4 py-3">Mercado</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {banqueiros.map((profile) => (
+                    <tr key={profile.id} className="border-t border-bci-line">
+                      <td className="px-4 py-3 font-bold">{profile.nome}</td>
+                      <td className="px-4 py-3">{profile.codigoInterno}</td>
+                      <td className="px-4 py-3 text-bci-muted">
+                        {profile.localId
+                          ? (marketMap.get(profile.localId) ?? profile.localId)
+                          : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </section>
-    </AppShell>
+    </div>
   );
 }

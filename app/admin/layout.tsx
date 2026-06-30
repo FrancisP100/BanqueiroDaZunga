@@ -10,7 +10,7 @@ import { BciLogo } from '@/components/ui/bci-logo';
 const navItems = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { name: 'Bankeiros', href: '/admin/banqueiros', icon: Users },
-  { name: 'Chefes', href: '/admin/chefes', icon: UserCheck },
+  { name: 'Líderes', href: '/admin/chefes', icon: UserCheck },
   { name: 'Mercados', href: '/admin/mercados', icon: Store },
 ];
 
