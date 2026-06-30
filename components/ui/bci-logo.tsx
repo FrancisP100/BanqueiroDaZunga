@@ -4,7 +4,7 @@ export function BciLogo({ className = "" }: { className?: string }) {
   return (
     <div className={`relative ${className}`}>
       <Image
-        src="/logo1.png"
+        src="/Logo1.png"
         alt="BCI Logo"
         fill
         className="object-contain"
