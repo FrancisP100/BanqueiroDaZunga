@@ -1,7 +1,8 @@
 import Link from 'next/link';
-import { Users, UserCheck, Store, Settings } from 'lucide-react';
+import { Users, UserCheck, Store, Settings, BarChart3 } from 'lucide-react';
 import { getMvpData } from '@/lib/data';
 import { updatePunctualityRule } from '@/app/admin/actions';
+import { AdminCharts } from '@/components/admin-charts'; // Import corrigido para a pasta root de componentes
 
 export default async function AdminDashboard() {
   const { profiles, markets, punctualityRule } = await getMvpData();
@@ -92,6 +93,21 @@ export default async function AdminDashboard() {
             </div>
           </Link>
         </div>
+      </div>
+
+      {/* Relatórios de Desempenho */}
+      <div className="rounded-2xl border border-bci-line bg-white p-6 shadow-card">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-bci-navySoft text-bci-navy">
+            <BarChart3 size={18} />
+          </div>
+          <div>
+            <p className="font-extrabold text-bci-ink">Relatórios de Desempenho</p>
+            <p className="text-xs text-bci-muted">Análise de produtividade e assiduidade global</p>
+          </div>
+        </div>
+        
+        <AdminCharts />
       </div>
 
       {/* Punctuality Settings */}
