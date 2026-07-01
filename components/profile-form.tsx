@@ -97,6 +97,14 @@ export function ProfileForm({
           placeholder="Mínimo 6 caracteres"
         />
       </label>
+      <label className="text-sm font-bold text-bci-ink">
+        Número do Balcão
+        <input
+          name="numero_balcao"
+          className="mt-2 w-full rounded-xl border border-bci-line px-4 py-3 font-medium outline-none focus:border-bci-pink focus:ring-4 focus:ring-pink-100"
+          placeholder="BCI-0030"
+        />
+      </label>
       {showMarket ? (
         <label className="text-sm font-bold text-bci-ink md:col-span-2">
           Mercado local

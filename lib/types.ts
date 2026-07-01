@@ -9,6 +9,7 @@ export type Profile = {
   telefone?: string;
   provincia?: string;
   localId?: string;
+  numeroBalcao?: string;
   ativo: boolean;
 };
 
@@ -67,6 +68,8 @@ export type Presence = {
   status: PresenceStatus;
   pontualidade: Punctuality;
   origem: "gps" | "automatica" | "manual";
+  observacao?: string;
+  updatedAt?: string;
 };
 
 export type PunctualityRule = {

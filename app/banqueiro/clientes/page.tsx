@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { createBrowserClient } from "@supabase/ssr";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Search,
@@ -77,7 +76,12 @@ export default function GestaoClientes() {
           data: acc.created_at,
         });
       });
-      setClientes(Array.from(clientMap.values()));
+      // Ordenar clientes alfabeticamente por nome
+      setClientes(
+        Array.from(clientMap.values()).sort((a: any, b: any) =>
+          a.nome.localeCompare(b.nome, "pt"),
+        ),
+      );
     }
     setLoading(false);
   };
@@ -115,8 +119,8 @@ export default function GestaoClientes() {
         </p>
       </div>
 
-      <Card>
-        <CardContent className="p-6">
+      <div className="rounded-2xl border border-bci-line bg-white shadow-card">
+        <div className="p-6">
           <div className="relative mb-6">
             <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
             <Input
@@ -136,50 +140,69 @@ export default function GestaoClientes() {
               Nenhum cliente encontrado.
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredClientes.map((cliente) => {
-                const pendentes = cliente.contas.filter(
-                  (c: any) => c.status === "pendente",
-                ).length;
-                return (
-                  <div
-                    key={cliente.id}
-                    className="border rounded-xl p-4 hover:shadow-md transition-shadow cursor-pointer bg-white"
-                    onClick={() => setSelectedCliente(cliente)}
-                  >
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="bg-bci-magenta/10 p-3 rounded-full text-bci-magenta">
-                        <UserCircle size={24} />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900 line-clamp-1">
-                          {cliente.nome}
-                        </h3>
-                        <p className="text-sm text-gray-500">
-                          BI: {cliente.bi}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-sm text-gray-600 flex justify-between border-t pt-3 mt-2">
-                      <span>
-                        Contas:{" "}
-                        <strong className="text-bci-magenta">
+            <div className="overflow-hidden rounded-xl border border-bci-line">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-50 text-xs uppercase text-bci-muted">
+                  <tr>
+                    <th className="px-4 py-3">Cliente</th>
+                    <th className="px-4 py-3">BI</th>
+                    <th className="px-4 py-3">Contacto</th>
+                    <th className="px-4 py-3">Contas</th>
+                    <th className="px-4 py-3">Pendentes</th>
+                    <th className="px-4 py-3"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredClientes.map((cliente) => {
+                    const pendentes = cliente.contas.filter(
+                      (c: any) => c.status === "pendente",
+                    ).length;
+                    return (
+                      <tr
+                        key={cliente.id}
+                        className="border-t border-bci-line hover:bg-slate-50/50 cursor-pointer"
+                        onClick={() => setSelectedCliente(cliente)}
+                      >
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="bg-bci-magenta/10 p-2 rounded-full text-bci-magenta flex-shrink-0">
+                              <UserCircle size={18} />
+                            </div>
+                            <span className="font-semibold text-gray-900">
+                              {cliente.nome}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-bci-muted">{cliente.bi}</td>
+                        <td className="px-4 py-3 text-bci-muted">{cliente.telefone}</td>
+                        <td className="px-4 py-3 font-bold text-bci-magenta">
                           {cliente.contas.length}
-                        </strong>
-                      </span>
-                      {pendentes > 0 && (
-                        <span className="text-amber-600 font-semibold">
-                          {pendentes} pendente(s)
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                        </td>
+                        <td className="px-4 py-3">
+                          {pendentes > 0 ? (
+                            <span className="text-amber-600 font-semibold text-xs">
+                              {pendentes} pendente(s)
+                            </span>
+                          ) : (
+                            <span className="text-emerald-600 text-xs font-medium">
+                              Todas activas
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-xs text-bci-muted hover:text-bci-magenta font-medium">
+                            Detalhes →
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <Dialog
         open={!!selectedCliente}

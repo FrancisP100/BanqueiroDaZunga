@@ -1,4 +1,5 @@
-import { UserCheck } from "lucide-react";
+import { UserCheck, Pencil } from "lucide-react";
+import Link from "next/link";
 import { ProfileForm } from "@/components/profile-form";
 import { getMvpData } from "@/lib/data";
 import { registerProfile } from "@/app/admin/actions";
@@ -58,6 +59,7 @@ export default async function AdminChefesPage() {
                     <th className="px-4 py-3">Nome</th>
                     <th className="px-4 py-3">Código</th>
                     <th className="px-4 py-3">Email</th>
+                    <th className="px-4 py-3">Acções</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -67,6 +69,14 @@ export default async function AdminChefesPage() {
                       <td className="px-4 py-3">{profile.codigoInterno}</td>
                       <td className="px-4 py-3 truncate text-bci-muted">
                         {profile.email}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Link
+                          href={`/admin/perfil/${profile.id}`}
+                          className="inline-flex items-center gap-1 rounded-lg bg-bci-goldSoft px-3 py-1.5 text-xs font-extrabold text-bci-gold hover:bg-bci-gold hover:text-white transition-colors"
+                        >
+                          <Pencil size={14} /> Editar
+                        </Link>
                       </td>
                     </tr>
                   ))}

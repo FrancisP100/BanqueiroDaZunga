@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   telefone text,
   provincia text,
   local_id uuid,
+  numero_balcao text,
   ativo boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now()
 );
@@ -70,6 +71,8 @@ CREATE TABLE IF NOT EXISTS clientes (
   telefone text,
   celular text,
   endereco text,
+  bi_emissao date,
+  bi_validade date,
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
@@ -82,6 +85,8 @@ CREATE TABLE IF NOT EXISTS accounts (
   mercado_id uuid NOT NULL REFERENCES markets(id),
   status account_status NOT NULL DEFAULT 'aberta',
   tem_tpa boolean NOT NULL DEFAULT false,
+  tpa_status text NOT NULL DEFAULT 'pendente',
+  hora_abertura time,
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
@@ -98,7 +103,9 @@ CREATE TABLE IF NOT EXISTS presences (
   status presence_status NOT NULL,
   pontualidade punctuality_status NOT NULL,
   origem presence_origin NOT NULL DEFAULT 'gps',
+  observacao text,
   created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz,
   UNIQUE (profile_id, data)
 );
 

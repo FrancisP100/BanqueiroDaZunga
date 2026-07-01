@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import { PresenceBadge, PunctualityBadge } from "@/components/ui/status-badge";
-import { ArrowLeft, CreditCard, MapPin, Phone, Calendar } from "lucide-react";
+import { ArrowLeft, CreditCard, MapPin, Phone, Calendar, Building } from "lucide-react";
 
 export default function InspecionarBanqueiro() {
   const params = useParams();
@@ -130,6 +130,11 @@ export default function InspecionarBanqueiro() {
             <MapPin size={14} /> {banqueiro.markets?.nome ?? "—"} ·{" "}
             {banqueiro.provincia}
           </span>
+          {banqueiro.numero_balcao && (
+            <span className="flex items-center gap-1.5">
+              <Building size={14} /> Balcão: {banqueiro.numero_balcao}
+            </span>
+          )}
         </div>
       </div>
 

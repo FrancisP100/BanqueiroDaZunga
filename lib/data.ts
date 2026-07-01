@@ -18,7 +18,7 @@ export async function getMvpData() {
   const [profilesResult, marketsResult, accountsResult, presencesResult, settingsResult] = await Promise.all([
     supabase.from("profiles").select("*").order("nome"),
     supabase.from("markets").select("*").order("nome"),
-    supabase.from("accounts").select("*, profiles(nome), markets(nome)").order("created_at", { ascending: false }),
+    supabase.from("accounts").select("*, profiles(nome), markets(nome), clientes(*)").order("created_at", { ascending: false }),
     supabase.from("presences").select("*, profiles(nome), markets(nome)").order("data", { ascending: false }),
     supabase.from("punctuality_settings").select("*").eq("id", true).single()
   ]);
@@ -32,6 +32,7 @@ export async function getMvpData() {
     telefone: row.telefone ?? undefined,
     provincia: row.provincia ?? undefined,
     localId: row.local_id ?? undefined,
+    numeroBalcao: row.numero_balcao ?? undefined,
     ativo: row.ativo
   }));
 
@@ -49,14 +50,17 @@ export async function getMvpData() {
   const accounts = (accountsResult.data ?? []).map((row): Account => ({
     id: row.id,
     createdAt: row.created_at,
+    horaAbertura: row.hora_abertura?.slice(0, 5),
     banqueiroId: row.banqueiro_id,
     banqueiroNome: row.profiles?.nome ?? "",
     clienteId: row.cliente_id ?? `CLI-${row.id.substring(0,4)}`,
-    clienteNome: row.cliente_nome,
-    bi: row.bi,
-    telefone: row.telefone,
-    celular: row.celular ?? undefined,
-    endereco: row.endereco ?? undefined,
+    clienteNome: row.clientes?.nome ?? "",
+    bi: row.clientes?.bi ?? "",
+    biEmissao: row.clientes?.bi_emissao ?? undefined,
+    biValidade: row.clientes?.bi_validade ?? undefined,
+    telefone: row.clientes?.telefone ?? "",
+    celular: row.clientes?.celular ?? undefined,
+    endereco: row.clientes?.endereco ?? undefined,
     pacote: row.pacote,
     pacoteStatus: row.pacote_status ?? "ativo",
     tpaStatus: row.tpa_status ?? "sem_tpa",
@@ -78,7 +82,9 @@ export async function getMvpData() {
     mercadoNome: row.markets?.nome ?? undefined,
     status: row.status,
     pontualidade: row.pontualidade,
-    origem: row.origem
+    origem: row.origem,
+    observacao: row.observacao ?? undefined,
+    updatedAt: row.updated_at ?? undefined
   }));
 
   const punctualityRule: PunctualityRule = settingsResult.data

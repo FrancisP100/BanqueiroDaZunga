@@ -57,6 +57,7 @@ export async function registerProfile(
   const provincia     = String(formData.get("provincia")      ?? "").trim();
   const localIdRaw    = String(formData.get("local_id")       ?? "").trim();
   const localId       = uuidRegex.test(localIdRaw) ? localIdRaw : null;
+  const numeroBalcao  = String(formData.get("numero_balcao")  ?? "").trim();
 
   if (!email)               return { error: "O email é obrigatório." };
   if (!password)            return { error: "A senha é obrigatória." };
@@ -152,6 +153,7 @@ export async function registerProfile(
     telefone: telefone || null,
     provincia: provincia || null,
     local_id: localId,
+    numero_balcao: numeroBalcao || null,
     ativo: true,
   });
 
@@ -168,6 +170,49 @@ export async function registerProfile(
     }
     return { error: "Erro ao guardar o perfil: " + profileError.message };
   }
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/banqueiros");
+  revalidatePath("/admin/chefes");
+  return null;
+}
+
+export async function editProfile(
+  _prevState: { error: string } | null,
+  formData: FormData
+): Promise<{ error: string } | null> {
+  if (!hasSupabaseEnv()) return null;
+
+  const profileId    = String(formData.get("id")              ?? "").trim();
+  const nome         = String(formData.get("nome")            ?? "").trim();
+  const email        = String(formData.get("email")           ?? "").trim();
+  const codigoInterno= String(formData.get("codigo_interno")  ?? "").trim();
+  const telefone     = String(formData.get("telefone")        ?? "").trim();
+  const provincia    = String(formData.get("provincia")       ?? "").trim();
+  const localIdRaw   = String(formData.get("local_id")        ?? "").trim();
+  const localId      = uuidRegex.test(localIdRaw) ? localIdRaw : null;
+  const numeroBalcao = String(formData.get("numero_balcao")   ?? "").trim();
+
+  if (!profileId) return { error: "ID do perfil é obrigatório." };
+  if (!nome)      return { error: "O nome é obrigatório." };
+  if (!email)     return { error: "O email é obrigatório." };
+
+  const adminClient = await getAdminClient();
+
+  const { error } = await adminClient
+    .from("profiles")
+    .update({
+      nome,
+      email,
+      codigo_interno: codigoInterno || undefined,
+      telefone: telefone || null,
+      provincia: provincia || null,
+      local_id: localId,
+      numero_balcao: numeroBalcao || null,
+    })
+    .eq("id", profileId);
+
+  if (error) return { error: "Erro ao actualizar perfil: " + error.message };
 
   revalidatePath("/admin");
   revalidatePath("/admin/banqueiros");

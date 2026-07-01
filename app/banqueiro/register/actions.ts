@@ -24,6 +24,7 @@ export async function registerProfile(
   const provincia    = String(formData.get("provincia")      ?? "").trim();
   const localIdRaw   = String(formData.get("local_id")       ?? "").trim();
   const localId      = uuidRegex.test(localIdRaw) ? localIdRaw : null;
+  const numeroBalcao = String(formData.get("numero_balcao")  ?? "").trim();
 
   // Validações
   if (!email)          return { error: "O email é obrigatório." };
@@ -122,6 +123,7 @@ export async function registerProfile(
     telefone: telefone || null,
     provincia: provincia || null,
     local_id: localId,
+    numero_balcao: numeroBalcao || null,
     ativo: true,
   });
 

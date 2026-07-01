@@ -1,4 +1,5 @@
-import { Users } from "lucide-react";
+import { Users, Eye, Pencil } from "lucide-react";
+import Link from "next/link";
 import { ProfileForm } from "@/components/profile-form";
 import { getMvpData } from "@/lib/data";
 import { registerProfile } from "@/app/admin/actions";
@@ -63,6 +64,7 @@ export default async function AdminBanqueirosPage() {
                     <th className="px-4 py-3">Nome</th>
                     <th className="px-4 py-3">Código</th>
                     <th className="px-4 py-3">Mercado</th>
+                    <th className="px-4 py-3">Acções</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -74,6 +76,22 @@ export default async function AdminBanqueirosPage() {
                         {profile.localId
                           ? (marketMap.get(profile.localId) ?? profile.localId)
                           : "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/chefe/banqueiros/${profile.id}`}
+                            className="inline-flex items-center gap-1 rounded-lg bg-bci-navySoft px-3 py-1.5 text-xs font-extrabold text-bci-navy hover:bg-bci-navy hover:text-white transition-colors"
+                          >
+                            <Eye size={14} /> Inspecionar
+                          </Link>
+                          <Link
+                            href={`/admin/perfil/${profile.id}`}
+                            className="inline-flex items-center gap-1 rounded-lg bg-bci-goldSoft px-3 py-1.5 text-xs font-extrabold text-bci-gold hover:bg-bci-gold hover:text-white transition-colors"
+                          >
+                            <Pencil size={14} /> Editar
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   ))}

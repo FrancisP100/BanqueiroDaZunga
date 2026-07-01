@@ -13,6 +13,7 @@ create table profiles (
   telefone text,
   provincia text,
   local_id uuid,
+  numero_balcao text,
   ativo boolean not null default true,
   created_at timestamptz not null default now()
 );
@@ -39,6 +40,8 @@ create table clientes (
   telefone text,
   celular text,
   endereco text,
+  bi_emissao date,
+  bi_validade date,
   created_at timestamptz not null default now()
 );
 
@@ -50,6 +53,8 @@ create table accounts (
   mercado_id uuid not null references markets(id),
   status account_status not null default 'aberta',
   tem_tpa boolean not null default false,
+  tpa_status text not null default 'pendente',
+  hora_abertura time,
   created_at timestamptz not null default now()
 );
 
@@ -65,7 +70,9 @@ create table presences (
   status presence_status not null,
   pontualidade punctuality_status not null,
   origem presence_origin not null default 'gps',
+  observacao text,
   created_at timestamptz not null default now(),
+  updated_at timestamptz,
   unique (profile_id, data)
 );
 

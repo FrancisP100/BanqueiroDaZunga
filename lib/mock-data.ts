@@ -11,6 +11,7 @@ export const profiles: Profile[] = [
     telefone: "923 111 222",
     provincia: "Luanda",
     localId: "market-30",
+    numeroBalcao: "BCI-0030",
     ativo: true
   },
   {
@@ -22,6 +23,7 @@ export const profiles: Profile[] = [
     telefone: "923 774 201",
     provincia: "Luanda",
     localId: "market-kikolo",
+    numeroBalcao: "BCI-0142",
     ativo: true
   },
   {
