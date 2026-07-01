@@ -81,7 +81,7 @@ export default async function AdminBanqueirosPage() {
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <Link
-                            href={`/chefe/banqueiros/${profile.id}`}
+                            href={`/admin/banqueiros/${profile.id}`}
                             className="inline-flex items-center gap-1 rounded-lg bg-bci-navySoft px-3 py-1.5 text-xs font-extrabold text-bci-navy hover:bg-bci-navy hover:text-white transition-colors"
                           >
                             <Eye size={14} /> Inspecionar
