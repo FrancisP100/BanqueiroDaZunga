@@ -111,6 +111,98 @@ export async function ativarConta(accountId: string) {
   return {};
 }
 
+/** Editar dados de um cliente */
+export async function editarCliente(formData: FormData) {
+  if (!hasSupabaseEnv()) return { error: "Supabase não configurado" };
+
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return { error: "Não autenticado" };
+
+  const clienteId  = String(formData.get("cliente_id") ?? "");
+  const nome       = String(formData.get("nome")       ?? "").trim();
+  const bi         = String(formData.get("bi")         ?? "").trim();
+  const telefone   = String(formData.get("telefone")   ?? "").trim();
+  const endereco   = String(formData.get("endereco")   ?? "").trim();
+  const biEmissao  = String(formData.get("bi_emissao") ?? "").trim() || null;
+  const biValidade = String(formData.get("bi_validade") ?? "").trim() || null;
+
+  if (!clienteId) return { error: "ID do cliente é obrigatório." };
+  if (!nome)      return { error: "O nome é obrigatório." };
+
+  const { error } = await supabase
+    .from("clientes")
+    .update({ nome, bi, telefone, endereco, bi_emissao: biEmissao, bi_validade: biValidade })
+    .eq("id", clienteId);
+
+  if (error) return { error: "Erro ao actualizar cliente: " + error.message };
+
+  revalidatePath("/banqueiro/clientes");
+  return {};
+}
+
+/** Eliminar um cliente e todas as suas contas */
+export async function eliminarCliente(clienteId: string) {
+  if (!hasSupabaseEnv()) return { error: "Supabase não configurado" };
+
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return { error: "Não autenticado" };
+
+  // Verificar que as contas pertencem a este banqueiro
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", auth.user.id)
+    .single();
+  if (!profile) return { error: "Perfil não encontrado" };
+
+  // Apagar contas associadas a este cliente E a este banqueiro
+  const { error: delAccountsError } = await supabase
+    .from("accounts")
+    .delete()
+    .eq("cliente_id", clienteId)
+    .eq("banqueiro_id", profile.id);
+
+  if (delAccountsError) return { error: "Erro ao eliminar contas: " + delAccountsError.message };
+
+  // Apagar o cliente
+  const { error: delClienteError } = await supabase
+    .from("clientes")
+    .delete()
+    .eq("id", clienteId);
+
+  if (delClienteError) return { error: "Erro ao eliminar cliente: " + delClienteError.message };
+
+  revalidatePath("/banqueiro/clientes");
+  return {};
+}
+
+/** Eliminar uma conta específica */
+export async function eliminarConta(accountId: string) {
+  if (!hasSupabaseEnv()) return { error: "Supabase não configurado" };
+
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return { error: "Não autenticado" };
+
+  const { data: account } = await supabase
+    .from("accounts")
+    .select("id, banqueiro_id")
+    .eq("id", accountId)
+    .single();
+
+  if (!account) return { error: "Conta não encontrada" };
+  if (account.banqueiro_id !== auth.user.id)
+    return { error: "Só o banqueiro responsável pode eliminar esta conta" };
+
+  const { error } = await supabase.from("accounts").delete().eq("id", accountId);
+  if (error) return { error: "Erro ao eliminar conta: " + error.message };
+
+  revalidatePath("/banqueiro/clientes");
+  return {};
+}
+
 /** Banqueiro actualiza o estado do TPA */
 export async function atualizarTpaStatus(
   accountId: string,

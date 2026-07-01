@@ -220,6 +220,36 @@ export async function editProfile(
   return null;
 }
 
+export async function deleteProfile(profileId: string): Promise<{ error?: string }> {
+  if (!hasSupabaseEnv()) return { error: "Supabase não configurado" };
+
+  const adminClient = await getAdminClient();
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  // Apagar perfil da tabela profiles
+  const { error: profileError } = await adminClient
+    .from("profiles")
+    .delete()
+    .eq("id", profileId);
+
+  if (profileError) return { error: "Erro ao eliminar perfil: " + profileError.message };
+
+  // Se tiver service role, apagar também o auth user
+  if (serviceKey) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const adminAuth = createSupabaseClient(supabaseUrl, serviceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    await (adminAuth as ReturnType<typeof createSupabaseClient>)
+      .auth.admin.deleteUser(profileId).catch(() => {});
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/banqueiros");
+  revalidatePath("/admin/chefes");
+  return {};
+}
+
 export async function updatePunctualityRule(formData: FormData) {
   if (!hasSupabaseEnv()) return;
 

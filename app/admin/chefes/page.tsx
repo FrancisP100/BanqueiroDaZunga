@@ -1,6 +1,7 @@
 import { UserCheck, Pencil } from "lucide-react";
 import Link from "next/link";
 import { ProfileForm } from "@/components/profile-form";
+import { DeleteProfileButton } from "@/components/delete-profile-button";
 import { getMvpData } from "@/lib/data";
 import { registerProfile } from "@/app/admin/actions";
 
@@ -71,12 +72,19 @@ export default async function AdminChefesPage() {
                         {profile.email}
                       </td>
                       <td className="px-4 py-3">
-                        <Link
-                          href={`/admin/perfil/${profile.id}`}
-                          className="inline-flex items-center gap-1 rounded-lg bg-bci-goldSoft px-3 py-1.5 text-xs font-extrabold text-bci-gold hover:bg-bci-gold hover:text-white transition-colors"
-                        >
-                          <Pencil size={14} /> Editar
-                        </Link>
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/admin/perfil/${profile.id}`}
+                            className="inline-flex items-center gap-1 rounded-lg bg-bci-goldSoft px-3 py-1.5 text-xs font-extrabold text-bci-gold hover:bg-bci-gold hover:text-white transition-colors"
+                          >
+                            <Pencil size={14} /> Editar
+                          </Link>
+                          <DeleteProfileButton
+                            profileId={profile.id}
+                            profileName={profile.nome}
+                            roleLabel="o líder"
+                          />
+                        </div>
                       </td>
                     </tr>
                   ))}

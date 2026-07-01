@@ -1,6 +1,7 @@
 import { Users, Eye, Pencil } from "lucide-react";
 import Link from "next/link";
 import { ProfileForm } from "@/components/profile-form";
+import { DeleteProfileButton } from "@/components/delete-profile-button";
 import { getMvpData } from "@/lib/data";
 import { registerProfile } from "@/app/admin/actions";
 
@@ -91,6 +92,11 @@ export default async function AdminBanqueirosPage() {
                           >
                             <Pencil size={14} /> Editar
                           </Link>
+                          <DeleteProfileButton
+                            profileId={profile.id}
+                            profileName={profile.nome}
+                            roleLabel="o banqueiro"
+                          />
                         </div>
                       </td>
                     </tr>
