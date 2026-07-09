@@ -257,3 +257,45 @@ export async function registerPresence(formData: FormData) {
   revalidatePath("/banqueiro");
   return { success: true };
 }
+
+/**
+ * Mark a single notification as read for the current banqueiro.
+ */
+export async function marcarNotificacaoLida(
+  notificationId: string,
+): Promise<{ error?: string }> {
+  if (!hasSupabaseEnv()) return { error: "Supabase não configurado" };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("notifications")
+    .update({ lida: true })
+    .eq("id", notificationId);
+
+  if (error) return { error: "Erro ao marcar notificação lida: " + error.message };
+
+  revalidatePath("/banqueiro");
+  return {};
+}
+
+/**
+ * Mark all notifications as read for the current banqueiro.
+ */
+export async function marcarTodasLidas(): Promise<{ error?: string }> {
+  if (!hasSupabaseEnv()) return { error: "Supabase não configurado" };
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Não autenticado" };
+
+  const { error } = await supabase
+    .from("notifications")
+    .update({ lida: true })
+    .eq("banqueiro_id", user.id)
+    .eq("lida", false);
+
+  if (error) return { error: "Erro ao marcar notificações: " + error.message };
+
+  revalidatePath("/banqueiro");
+  return {};
+}

@@ -2,11 +2,12 @@ import { UserCheck, Pencil } from "lucide-react";
 import Link from "next/link";
 import { ProfileForm } from "@/components/profile-form";
 import { DeleteProfileButton } from "@/components/delete-profile-button";
+import { ToggleProfileStatus } from "@/components/toggle-profile-status";
 import { getMvpData } from "@/lib/data";
 import { registerProfile } from "@/app/admin/actions";
 
 export default async function AdminChefesPage() {
-  const { profiles } = await getMvpData();
+  const { profiles, markets } = await getMvpData();
   const chefes = profiles.filter((profile) => profile.papel === "chefe");
 
   return (
@@ -28,7 +29,9 @@ export default async function AdminChefesPage() {
           <ProfileForm
             role="chefe"
             title="Dados do líder"
-            description="Registe um líder para gerir presenças e acompanhar o desempenho dos banqueiros."
+            description="Registe um líder para gerir presenças e acompanhar o desempenho dos banqueiros. Associe-o a um mercado/balcão para restringir a sua visão."
+            showMarket
+            markets={markets}
             action={registerProfile}
           />
         </div>
@@ -57,6 +60,7 @@ export default async function AdminChefesPage() {
               <table className="w-full text-left text-sm">
                 <thead className="bg-slate-50 text-xs uppercase text-bci-muted">
                   <tr>
+                    <th className="px-4 py-3">Estado</th>
                     <th className="px-4 py-3">Nome</th>
                     <th className="px-4 py-3">Código</th>
                     <th className="px-4 py-3">Email</th>
@@ -65,20 +69,41 @@ export default async function AdminChefesPage() {
                 </thead>
                 <tbody>
                   {chefes.map((profile) => (
-                    <tr key={profile.id} className="border-t border-bci-line">
+                    <tr
+                      key={profile.id}
+                      className={`border-t border-bci-line ${
+                        !profile.ativo ? "opacity-60 bg-red-50/30" : ""
+                      }`}
+                    >
+                      <td className="px-4 py-3">
+                        <span
+                          className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                            profile.ativo
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-slate-200 text-slate-600"
+                          }`}
+                        >
+                          {profile.ativo ? "Activo" : "Bloqueado"}
+                        </span>
+                      </td>
                       <td className="px-4 py-3 font-bold">{profile.nome}</td>
                       <td className="px-4 py-3">{profile.codigoInterno}</td>
                       <td className="px-4 py-3 truncate text-bci-muted">
                         {profile.email}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <Link
                             href={`/admin/perfil/${profile.id}`}
                             className="inline-flex items-center gap-1 rounded-lg bg-bci-goldSoft px-3 py-1.5 text-xs font-extrabold text-bci-gold hover:bg-bci-gold hover:text-white transition-colors"
                           >
                             <Pencil size={14} /> Editar
                           </Link>
+                          <ToggleProfileStatus
+                            profileId={profile.id}
+                            profileName={profile.nome}
+                            ativo={profile.ativo}
+                          />
                           <DeleteProfileButton
                             profileId={profile.id}
                             profileName={profile.nome}

@@ -7,6 +7,7 @@ import { Users, CheckCircle, Clock, XCircle, ClipboardList, Search } from 'lucid
 import { PresenceBadge, PunctualityBadge } from '@/components/ui/status-badge';
 import type { PresenceStatus, Punctuality } from '@/lib/types';
 import { updatePresence, createManualPresence } from '@/app/chefe/actions';
+import { getAllowedMarketIds } from '@/lib/leader-scope';
 
 type PresenceRow = {
   id: string; profileId: string; nome: string; mercadoNome: string;
@@ -44,32 +45,43 @@ export default function LiderDashboard() {
 
   async function loadData(d: string) {
     setLoading(true);
-    const [bResult, mResult, pResult] = await Promise.all([
-      supabase.from('profiles').select('id, nome, local_id').eq('papel', 'banqueiro').order('nome'),
+
+    const [mResult, bResult, pResult] = await Promise.all([
       supabase.from('markets').select('id, nome'),
+      supabase.from('profiles').select('id, nome, local_id').eq('papel', 'banqueiro').order('nome'),
       supabase.from('presences')
         .select('id, profile_id, data, entrada, saida, status, pontualidade, origem, profiles(nome), markets(nome)')
         .eq('data', d),
     ]);
 
+    // Build market map
     const mMap: Record<string, string> = {};
     (mResult.data ?? []).forEach((m: { id: string; nome: string }) => { mMap[m.id] = m.nome; });
     setMarketMap(mMap);
 
-    const banqList: BanqueiroRow[] = (bResult.data ?? []).map((b: any) => ({
-      id: b.id, nome: b.nome, localId: b.local_id, mercadoNome: b.local_id ? (mMap[b.local_id] ?? '—') : '—',
-    }));
+    // Determine which banqueiros this leader can see (same balcão)
+    const allowedMarketIds = await getAllowedMarketIds(supabase);
+    const canSeeAll = allowedMarketIds.size === 0;
+
+    const banqList: BanqueiroRow[] = (bResult.data ?? [])
+      .filter(b => canSeeAll || (b.local_id && allowedMarketIds.has(b.local_id)))
+      .map((b: any) => ({
+        id: b.id, nome: b.nome, localId: b.local_id, mercadoNome: b.local_id ? (mMap[b.local_id] ?? '—') : '—',
+      }));
     setBanqueiros(banqList);
 
-    const presList: PresenceRow[] = (pResult.data ?? []).map((row: any) => ({
-      id: row.id,
-      profileId: row.profile_id,
-      nome: Array.isArray(row.profiles) ? (row.profiles[0]?.nome ?? '') : (row.profiles?.nome ?? ''),
-      mercadoNome: Array.isArray(row.markets) ? (row.markets[0]?.nome ?? '-') : (row.markets?.nome ?? '-'),
-      entrada: row.entrada ? String(row.entrada).slice(0, 5) : null,
-      saida: row.saida ? String(row.saida).slice(0, 5) : null,
-      status: row.status, pontualidade: row.pontualidade, origem: row.origem,
-    }));
+    const allowedProfileIds = new Set(banqList.map(b => b.id));
+    const presList: PresenceRow[] = (pResult.data ?? [])
+      .filter((row: any) => canSeeAll || allowedProfileIds.has(row.profile_id))
+      .map((row: any) => ({
+        id: row.id,
+        profileId: row.profile_id,
+        nome: Array.isArray(row.profiles) ? (row.profiles[0]?.nome ?? '') : (row.profiles?.nome ?? ''),
+        mercadoNome: Array.isArray(row.markets) ? (row.markets[0]?.nome ?? '-') : (row.markets?.nome ?? '-'),
+        entrada: row.entrada ? String(row.entrada).slice(0, 5) : null,
+        saida: row.saida ? String(row.saida).slice(0, 5) : null,
+        status: row.status, pontualidade: row.pontualidade, origem: row.origem,
+      }));
     setPresences(presList);
     setLoading(false);
   }

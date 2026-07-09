@@ -45,6 +45,7 @@ Thumbs.db
 *.png
 !public/logo.png
 !public/Logo1.png
+Developassets/
 legacyassets/
 middleware.ts.bak
 

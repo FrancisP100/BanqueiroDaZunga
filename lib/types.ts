@@ -24,7 +24,7 @@ export type Market = {
   raioMetros: number;
 };
 
-export const PACOTES = ["Mãezinha", "Mãe", "Mãe Grande"] as const;
+export const PACOTES = ["Mãezinha", "Mãe", "Mãe Grande", "Mamoite"] as const;
 export type Pacote = (typeof PACOTES)[number];
 
 export type TpaStatus = "pendente" | "entregue" | "sem_tpa" | "por_entregar";
@@ -75,6 +75,17 @@ export type Presence = {
 export type PunctualityRule = {
   horaLimite: string;
   toleranciaMin: number;
+};
+
+export type Notification = {
+  id: string;
+  leaderId: string;
+  banqueiroId: string;
+  clienteNome: string;
+  contaId?: string;
+  mensagem: string;
+  lida: boolean;
+  createdAt: string;
 };
 
 export type ReportPeriod = "dia" | "semana" | "mes" | "ano";

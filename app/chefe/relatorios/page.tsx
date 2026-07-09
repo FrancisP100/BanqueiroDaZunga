@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { FileBarChart, CreditCard, Package, Building2 } from 'lucide-react';
 import type { ReportPeriod } from '@/lib/types';
+import { getAllowedMarketIds } from '@/lib/leader-scope';
 
 function getRangeStart(period: ReportPeriod): string {
   const now = new Date();
@@ -37,13 +38,19 @@ export default function RelatoriosPage() {
       const { data: mkts } = await supabase.from('markets').select('id, nome, provincia, balcao');
       setMarkets(mkts ?? []);
 
-      let query = supabase
+      const { data: accs } = await supabase
         .from('accounts')
         .select('id, pacote, status, tpa_status, created_at, mercado_id, banqueiro_id, profiles(nome), markets(nome, balcao, provincia)')
         .gte('created_at', since);
 
-      const { data: accs } = await query;
       let filtered = accs ?? [];
+
+      // Filter by this leader's balcão
+      const allowedMarketIds = await getAllowedMarketIds(supabase);
+      const canSeeAll = allowedMarketIds.size === 0;
+      if (!canSeeAll) {
+        filtered = filtered.filter((a: any) => a.mercado_id && allowedMarketIds.has(a.mercado_id));
+      }
 
       if (balcaoFiltro !== 'todos') {
         filtered = filtered.filter((a: any) => a.mercado_id === balcaoFiltro);

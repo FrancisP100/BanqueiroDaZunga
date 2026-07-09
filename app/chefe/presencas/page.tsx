@@ -6,6 +6,7 @@ import { CheckCircle, Clock, XCircle, Users } from 'lucide-react';
 import { PresenceBadge, PunctualityBadge } from '@/components/ui/status-badge';
 import type { PresenceStatus, Punctuality } from '@/lib/types';
 import { updatePresence, createManualPresence } from '@/app/chefe/actions';
+import { getAllowedMarketIds } from '@/lib/leader-scope';
 
 type PresenceRow = {
   id: string;
@@ -74,26 +75,36 @@ export default function PresencasPage() {
     (mResult.data ?? []).forEach((m: { id: string; nome: string }) => { mMap[m.id] = m.nome; });
     setMarketMap(mMap);
 
-    const banqList: BanqueiroRow[] = (bResult.data ?? []).map((b: { id: string; nome: string; local_id: string | null }) => ({
-      id: b.id,
-      nome: b.nome,
-      localId: b.local_id,
-    }));
+    // Filter banqueiros by this leader's balcão
+    const allowedMarketIds = await getAllowedMarketIds(supabase);
+    const canSeeAll = allowedMarketIds.size === 0;
+
+    const banqList: BanqueiroRow[] = (bResult.data ?? [])
+      .filter((b: { local_id: string | null }) => canSeeAll || (b.local_id && allowedMarketIds.has(b.local_id)))
+      .map((b: { id: string; nome: string; local_id: string | null }) => ({
+        id: b.id,
+        nome: b.nome,
+        localId: b.local_id,
+      }));
     setBanqueiros(banqList);
 
+    const allowedProfileIds = new Set(banqList.map(b => b.id));
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const presList: PresenceRow[] = (pResult.data ?? []).map((row: any) => ({
-      id: row.id,
-      profileId: row.profile_id,
-      nome: Array.isArray(row.profiles) ? (row.profiles[0]?.nome ?? '') : (row.profiles?.nome ?? ''),
-      mercadoId: row.mercado_id,
-      mercadoNome: Array.isArray(row.markets) ? (row.markets[0]?.nome ?? '-') : (row.markets?.nome ?? '-'),
-      entrada: row.entrada ? String(row.entrada).slice(0, 5) : null,
-      saida: row.saida ? String(row.saida).slice(0, 5) : null,
-      status: row.status as PresenceStatus,
-      pontualidade: row.pontualidade as Punctuality,
-      origem: row.origem,
-    }));
+    const presList: PresenceRow[] = (pResult.data ?? [])
+      .filter((row: any) => canSeeAll || allowedProfileIds.has(row.profile_id))
+      .map((row: any) => ({
+        id: row.id,
+        profileId: row.profile_id,
+        nome: Array.isArray(row.profiles) ? (row.profiles[0]?.nome ?? '') : (row.profiles?.nome ?? ''),
+        mercadoId: row.mercado_id,
+        mercadoNome: Array.isArray(row.markets) ? (row.markets[0]?.nome ?? '-') : (row.markets?.nome ?? '-'),
+        entrada: row.entrada ? String(row.entrada).slice(0, 5) : null,
+        saida: row.saida ? String(row.saida).slice(0, 5) : null,
+        status: row.status as PresenceStatus,
+        pontualidade: row.pontualidade as Punctuality,
+        origem: row.origem,
+      }));
     setPresences(presList);
 
     setLoading(false);

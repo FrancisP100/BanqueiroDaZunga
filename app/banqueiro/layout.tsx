@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
-import { LayoutDashboard, Users, UserPlus, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Users, UserPlus, Bell, LogOut, Menu, X } from 'lucide-react';
 import { BciLogo } from '@/components/ui/bci-logo';
 
 export default function BanqueiroLayout({
@@ -37,6 +37,27 @@ export default function BanqueiroLayout({
     { name: 'Abrir Conta', href: '/banqueiro/abrir-conta', icon: UserPlus },
     { name: 'Meus Clientes', href: '/banqueiro/clientes', icon: Users },
   ];
+
+  const [notifCount, setNotifCount] = useState(0);
+
+  useEffect(() => {
+    async function loadNotifCount() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { count } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('banqueiro_id', user.id)
+        .eq('lida', false);
+      setNotifCount(count ?? 0);
+    }
+    loadNotifCount();
+
+    // Poll a cada 30 segundos
+    const interval = setInterval(loadNotifCount, 30000);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
 
   return (
@@ -72,7 +93,12 @@ export default function BanqueiroLayout({
                 }`}
               >
                 <Icon size={20} className="mr-3" />
-                {item.name}
+                <span className="flex-1">{item.name}</span>
+                {item.name === 'Dashboard' && notifCount > 0 && (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-bci-magenta px-1.5 text-[10px] font-extrabold text-white">
+                    {notifCount}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -118,7 +144,12 @@ export default function BanqueiroLayout({
                   }`}
                 >
                   <Icon size={20} className="mr-3" />
-                  {item.name}
+                  <span className="flex-1">{item.name}</span>
+                  {item.name === 'Dashboard' && notifCount > 0 && (
+                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-bci-magenta px-1.5 text-[10px] font-extrabold text-white">
+                      {notifCount}
+                    </span>
+                  )}
                 </Link>
               );
             })}

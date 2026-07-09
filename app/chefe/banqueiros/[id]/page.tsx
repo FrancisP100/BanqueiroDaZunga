@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import { PresenceBadge, PunctualityBadge } from "@/components/ui/status-badge";
 import { ArrowLeft, CreditCard, MapPin, Phone, Calendar, Building } from "lucide-react";
+import { verifyBanqueiroAccess } from "@/lib/leader-scope";
 
 export default function InspecionarBanqueiro() {
   const params = useParams();
@@ -36,7 +37,7 @@ export default function InspecionarBanqueiro() {
       const [profileRes, presRes, accsRes] = await Promise.all([
         supabase
           .from("profiles")
-          .select("*, markets(nome, provincia)")
+          .select("*, markets(nome, provincia, balcao)")
           .eq("id", id)
           .single(),
         supabase
@@ -56,6 +57,14 @@ export default function InspecionarBanqueiro() {
 
       if (profileRes.error) throw profileRes.error;
 
+      // Verify this leader has access to this banqueiro
+      const hasAccess = await verifyBanqueiroAccess(supabase, profileRes.data.local_id);
+      if (!hasAccess) {
+        setError("Não tem permissão para inspeccionar este banqueiro — não pertence ao seu balcão.");
+        setLoading(false);
+        return;
+      }
+
       setBanqueiro(profileRes.data);
       setPresencas(presRes.data ?? []);
       setContas(accsRes.data ?? []);
@@ -65,7 +74,8 @@ export default function InspecionarBanqueiro() {
     } finally {
       setLoading(false);
     }
-  }, [id, supabase]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   useEffect(() => {
     loadData();

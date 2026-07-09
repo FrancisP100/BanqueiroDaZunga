@@ -6,6 +6,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import { Search, Users } from "lucide-react";
 import { PresenceBadge } from "@/components/ui/status-badge";
 import type { PresenceStatus } from "@/lib/types";
+import { getAllowedMarketIds } from "@/lib/leader-scope";
 
 type BanqueiroRow = {
   id: string;
@@ -63,8 +64,13 @@ export default function BanqueirosPage() {
           marketMap[m.id] = m.nome;
         });
 
-        setBanqueiros(
-          (bResult.data ?? []).map(
+        // Filter by this leader's balcão
+        const allowedMarketIds = await getAllowedMarketIds(supabase);
+        const canSeeAll = allowedMarketIds.size === 0;
+
+        const filteredBanqueiros = (bResult.data ?? [])
+          .filter((b: { local_id: string | null }) => canSeeAll || (b.local_id && allowedMarketIds.has(b.local_id)))
+          .map(
             (b: {
               id: string;
               nome: string;
@@ -80,14 +86,18 @@ export default function BanqueirosPage() {
               mercadoNome: b.local_id ? (marketMap[b.local_id] ?? "—") : "—",
               ativo: b.ativo,
             }),
-          ),
-        );
+          );
 
+        setBanqueiros(filteredBanqueiros);
+
+        const allowedProfileIds = new Set(filteredBanqueiros.map(b => b.id));
         setPresencasHoje(
-          (pResult.data ?? []).map((p: { profile_id: string; status: PresenceStatus }) => ({
-            profileId: p.profile_id,
-            status: p.status,
-          })),
+          (pResult.data ?? [])
+            .filter((p: { profile_id: string }) => canSeeAll || allowedProfileIds.has(p.profile_id))
+            .map((p: { profile_id: string; status: PresenceStatus }) => ({
+              profileId: p.profile_id,
+              status: p.status,
+            })),
         );
       } catch (err: unknown) {
         console.error(err);
@@ -98,7 +108,8 @@ export default function BanqueirosPage() {
     }
 
     loadData();
-  }, [supabase]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const filtered = banqueiros.filter((b) => {
     const q = search.toLowerCase();

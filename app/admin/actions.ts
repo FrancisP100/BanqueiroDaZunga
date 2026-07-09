@@ -250,6 +250,27 @@ export async function deleteProfile(profileId: string): Promise<{ error?: string
   return {};
 }
 
+export async function toggleProfileStatus(
+  profileId: string,
+  ativo: boolean
+): Promise<{ error?: string }> {
+  if (!hasSupabaseEnv()) return { error: "Supabase não configurado" };
+
+  const adminClient = await getAdminClient();
+
+  const { error } = await adminClient
+    .from("profiles")
+    .update({ ativo })
+    .eq("id", profileId);
+
+  if (error) return { error: "Erro ao alterar estado: " + error.message };
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/banqueiros");
+  revalidatePath("/admin/chefes");
+  return {};
+}
+
 export async function updatePunctualityRule(formData: FormData) {
   if (!hasSupabaseEnv()) return;
 

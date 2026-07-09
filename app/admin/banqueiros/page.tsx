@@ -2,6 +2,7 @@ import { Users, Eye, Pencil } from "lucide-react";
 import Link from "next/link";
 import { ProfileForm } from "@/components/profile-form";
 import { DeleteProfileButton } from "@/components/delete-profile-button";
+import { ToggleProfileStatus } from "@/components/toggle-profile-status";
 import { getMvpData } from "@/lib/data";
 import { registerProfile } from "@/app/admin/actions";
 
@@ -62,6 +63,7 @@ export default async function AdminBanqueirosPage() {
               <table className="w-full text-left text-sm">
                 <thead className="bg-slate-50 text-xs uppercase text-bci-muted">
                   <tr>
+                    <th className="px-4 py-3">Estado</th>
                     <th className="px-4 py-3">Nome</th>
                     <th className="px-4 py-3">Código</th>
                     <th className="px-4 py-3">Mercado</th>
@@ -70,7 +72,23 @@ export default async function AdminBanqueirosPage() {
                 </thead>
                 <tbody>
                   {banqueiros.map((profile) => (
-                    <tr key={profile.id} className="border-t border-bci-line">
+                    <tr
+                      key={profile.id}
+                      className={`border-t border-bci-line ${
+                        !profile.ativo ? "opacity-60 bg-red-50/30" : ""
+                      }`}
+                    >
+                      <td className="px-4 py-3">
+                        <span
+                          className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                            profile.ativo
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-slate-200 text-slate-600"
+                          }`}
+                        >
+                          {profile.ativo ? "Activo" : "Bloqueado"}
+                        </span>
+                      </td>
                       <td className="px-4 py-3 font-bold">{profile.nome}</td>
                       <td className="px-4 py-3">{profile.codigoInterno}</td>
                       <td className="px-4 py-3 text-bci-muted">
@@ -79,7 +97,7 @@ export default async function AdminBanqueirosPage() {
                           : "—"}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <Link
                             href={`/admin/banqueiros/${profile.id}`}
                             className="inline-flex items-center gap-1 rounded-lg bg-bci-navySoft px-3 py-1.5 text-xs font-extrabold text-bci-navy hover:bg-bci-navy hover:text-white transition-colors"
@@ -92,6 +110,11 @@ export default async function AdminBanqueirosPage() {
                           >
                             <Pencil size={14} /> Editar
                           </Link>
+                          <ToggleProfileStatus
+                            profileId={profile.id}
+                            profileName={profile.nome}
+                            ativo={profile.ativo}
+                          />
                           <DeleteProfileButton
                             profileId={profile.id}
                             profileName={profile.nome}
