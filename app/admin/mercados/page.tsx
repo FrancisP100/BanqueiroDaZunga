@@ -17,17 +17,16 @@ export default async function AdminMercadosPage() {
         </h1>
       </div>
 
-      <section className="grid gap-6 xl:grid-cols-[1.23fr_0.77fr]">
-        {/* Form */}
-        <div>
-          <h2 className="mb-3 text-xl font-extrabold text-bci-ink">
-            Registar novo mercado
-          </h2>
-          <MarketForm />
-        </div>
+      {/* Formulário por cima */}
+      <div>
+        <h2 className="mb-3 text-xl font-extrabold text-bci-ink">
+          Registar novo mercado
+        </h2>
+        <MarketForm />
+      </div>
 
-        {/* List */}
-        <div className="rounded-2xl border border-bci-line bg-white p-5 shadow-card">
+      {/* Listagem por baixo */}
+      <div className="rounded-2xl border border-bci-line bg-white p-5 shadow-card">
           <div className="flex items-center gap-3 mb-5">
             <div className="grid h-10 w-10 place-items-center rounded-xl bg-bci-navySoft text-bci-navy">
               <Store size={18} />
@@ -73,7 +72,6 @@ export default async function AdminMercadosPage() {
             </div>
           )}
         </div>
-      </section>
     </div>
   );
 }

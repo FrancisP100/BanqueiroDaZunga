@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { createBrowserClient } from "@supabase/ssr";
-import { LogIn, ArrowLeft, UserRound } from "lucide-react";
+import { LogIn, UserRound } from "lucide-react";
 
 const hasSupabase = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -81,16 +80,8 @@ export default function BanqueiroLoginPage() {
         </div>
 
         <div className="p-8">
-          <Link
-            href="/"
-            className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-6 transition-colors"
-          >
-            <ArrowLeft size={16} className="mr-1" />
-            Voltar à página inicial
-          </Link>
-
           <h2 className="text-2xl font-semibold text-gray-800 mb-6 text-center">
-            Iniciar Sessão como Banqueiro
+            Iniciar Sessão
           </h2>
 
           {error && (
@@ -144,15 +135,7 @@ export default function BanqueiroLoginPage() {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-gray-500">
-            Não tem conta?{" "}
-            <Link
-              href="/banqueiro/register"
-              className="font-bold text-bci-magenta hover:underline"
-            >
-              Registar-se
-            </Link>
-          </p>
+
         </div>
       </div>
     </div>

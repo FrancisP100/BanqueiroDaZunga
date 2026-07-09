@@ -29,7 +29,6 @@ import {
   Tooltip as RechartsTooltip,
   Legend,
 } from "recharts";
-import Link from "next/link";
 
 type ReportPeriod = "dia" | "semana" | "mes" | "ano";
 
@@ -720,13 +719,6 @@ export default function BanqueiroDashboard() {
         </CardContent>
       </Card>
 
-      <div className="mt-8">
-        <Link href="/banqueiro/abrir-conta">
-          <Button className="w-full sm:w-auto bg-bci-dark hover:bg-bci-dark/90 text-white font-semibold py-6 px-8 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all">
-            <CreditCard className="mr-3" size={24} /> Abrir Nova Conta
-          </Button>
-        </Link>
-      </div>
     </div>
   );
 }

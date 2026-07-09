@@ -24,22 +24,23 @@ export default async function AdminBanqueirosPage() {
         </h1>
       </div>
 
-      <section className="grid gap-6 xl:grid-cols-[1.23fr_0.77fr]">
-        <div>
-          <h2 className="mb-3 text-xl font-extrabold text-bci-ink">
-            Cadastrar um novo banqueiro
-          </h2>
-          <ProfileForm
-            role="banqueiro"
-            title="Dados do banqueiro"
-            description="Use este formulário para registar um novo banqueiro e associar um mercado local, se aplicável."
-            showMarket
-            markets={markets}
-            action={registerProfile}
-          />
-        </div>
+      {/* Formulário por cima */}
+      <div>
+        <h2 className="mb-3 text-xl font-extrabold text-bci-ink">
+          Cadastrar um novo banqueiro
+        </h2>
+        <ProfileForm
+          role="banqueiro"
+          title="Dados do banqueiro"
+          description="Use este formulário para registar um novo banqueiro e associar um mercado local, se aplicável."
+          showMarket
+          markets={markets}
+          action={registerProfile}
+        />
+      </div>
 
-        <div className="rounded-2xl border border-bci-line bg-white p-5 shadow-card">
+      {/* Listagem por baixo */}
+      <div className="rounded-2xl border border-bci-line bg-white p-5 shadow-card">
           <div className="flex items-center gap-3 mb-5">
             <div className="grid h-10 w-10 place-items-center rounded-xl bg-bci-navySoft text-bci-navy">
               <Users size={18} />
@@ -129,7 +130,6 @@ export default async function AdminBanqueirosPage() {
             </div>
           )}
         </div>
-      </section>
     </div>
   );
 }

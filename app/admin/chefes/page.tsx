@@ -21,22 +21,23 @@ export default async function AdminChefesPage() {
         </h1>
       </div>
 
-      <section className="grid gap-6 xl:grid-cols-[1.23fr_0.77fr]">
-        <div>
-          <h2 className="mb-3 text-xl font-extrabold text-bci-ink">
-            Cadastrar um novo líder
-          </h2>
-          <ProfileForm
-            role="chefe"
-            title="Dados do líder"
-            description="Registe um líder para gerir presenças e acompanhar o desempenho dos banqueiros. Associe-o a um mercado/balcão para restringir a sua visão."
-            showMarket
-            markets={markets}
-            action={registerProfile}
-          />
-        </div>
+      {/* Formulário por cima */}
+      <div>
+        <h2 className="mb-3 text-xl font-extrabold text-bci-ink">
+          Cadastrar um novo líder
+        </h2>
+        <ProfileForm
+          role="chefe"
+          title="Dados do líder"
+          description="Registe um líder para gerir presenças e acompanhar o desempenho dos banqueiros. Associe-o a um mercado/balcão para restringir a sua visão."
+          showMarket
+          markets={markets}
+          action={registerProfile}
+        />
+      </div>
 
-        <div className="rounded-2xl border border-bci-line bg-white p-5 shadow-card">
+      {/* Listagem por baixo */}
+      <div className="rounded-2xl border border-bci-line bg-white p-5 shadow-card">
           <div className="flex items-center gap-3 mb-5">
             <div className="grid h-10 w-10 place-items-center rounded-xl bg-bci-navySoft text-bci-navy">
               <UserCheck size={18} />
@@ -118,7 +119,6 @@ export default async function AdminChefesPage() {
             </div>
           )}
         </div>
-      </section>
     </div>
   );
 }

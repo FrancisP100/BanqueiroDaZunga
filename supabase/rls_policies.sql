@@ -63,6 +63,16 @@ CREATE POLICY "accounts_insert"
   ON accounts FOR INSERT
   WITH CHECK (auth.uid() = banqueiro_id OR auth.role() = 'service_role');
 
+DROP POLICY IF EXISTS "accounts_update_own" ON accounts;
+CREATE POLICY "accounts_update_own"
+  ON accounts FOR UPDATE
+  USING (auth.uid() = banqueiro_id OR auth.role() = 'service_role');
+
+DROP POLICY IF EXISTS "accounts_delete_own" ON accounts;
+CREATE POLICY "accounts_delete_own"
+  ON accounts FOR DELETE
+  USING (auth.uid() = banqueiro_id OR auth.role() = 'service_role');
+
 -- Clientes: acesso autenticado
 ALTER TABLE clientes ENABLE ROW LEVEL SECURITY;
 

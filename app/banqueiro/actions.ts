@@ -1,8 +1,21 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
+
+async function getAdminClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (serviceKey) {
+    return createSupabaseClient(supabaseUrl, serviceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+  }
+  return await createClient();
+}
 
 export async function createAccount(formData: FormData) {
   if (!hasSupabaseEnv()) return;
@@ -86,11 +99,15 @@ export async function createAccount(formData: FormData) {
 export async function ativarConta(accountId: string) {
   if (!hasSupabaseEnv()) return { error: "Supabase não configurado" };
 
+  // Use regular client for auth verification (picks up session cookies)
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return { error: "Não autenticado" };
 
-  const { data: account } = await supabase
+  // Use admin client for the actual update (bypasses RLS)
+  const adminClient = await getAdminClient();
+
+  const { data: account } = await adminClient
     .from("accounts")
     .select("id, banqueiro_id, status")
     .eq("id", accountId)
@@ -101,7 +118,7 @@ export async function ativarConta(accountId: string) {
     return { error: "Só o banqueiro responsável pode activar esta conta" };
   if (account.status === "aberta") return {};
 
-  const { error } = await supabase
+  const { error } = await adminClient
     .from("accounts")
     .update({ status: "aberta" })
     .eq("id", accountId);
