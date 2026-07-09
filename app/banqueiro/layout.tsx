@@ -22,22 +22,6 @@ export default function BanqueiroLayout({
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/login');
-  };
-
-  // Não aplicar layout nas páginas de login/register
-  if (pathname === '/banqueiro/login' || pathname === '/banqueiro/register') {
-    return <>{children}</>;
-  }
-
-  const navItems = [
-    { name: 'Dashboard', href: '/banqueiro', icon: LayoutDashboard },
-    { name: 'Abrir Conta', href: '/banqueiro/abrir-conta', icon: UserPlus },
-    { name: 'Meus Clientes', href: '/banqueiro/clientes', icon: Users },
-  ];
-
   const [notifCount, setNotifCount] = useState(0);
 
   useEffect(() => {
@@ -58,6 +42,22 @@ export default function BanqueiroLayout({
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
+
+  // Não aplicar layout nas páginas de login/register
+  if (pathname === '/banqueiro/login' || pathname === '/banqueiro/register') {
+    return <>{children}</>;
+  }
+
+  const navItems = [
+    { name: 'Dashboard', href: '/banqueiro', icon: LayoutDashboard },
+    { name: 'Abrir Conta', href: '/banqueiro/abrir-conta', icon: UserPlus },
+    { name: 'Meus Clientes', href: '/banqueiro/clientes', icon: Users },
+  ];
 
 
   return (
