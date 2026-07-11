@@ -44,7 +44,7 @@ export default async function AdminMercadosPage() {
               Nenhum mercado registado ainda.
             </p>
           ) : (
-            <div className="overflow-hidden rounded-2xl border border-bci-line">
+            <div className="overflow-x-auto rounded-2xl border border-bci-line">
               <table className="w-full text-left text-sm">
                 <thead className="bg-slate-50 text-xs uppercase text-bci-muted">
                   <tr>

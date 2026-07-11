@@ -361,9 +361,9 @@ export function AdminCharts() {
     <div className="space-y-8">
       {/* Filtro de período */}
       <div className="flex flex-wrap items-center gap-3 p-4 rounded-2xl border border-bci-line bg-white">
-        <Calendar size={18} className="text-bci-magenta" />
-        <span className="text-sm font-bold text-bci-ink">Período:</span>
-        <div className="flex rounded-xl border border-bci-line bg-white p-1">
+        <Calendar size={18} className="text-bci-magenta flex-shrink-0" />
+        <span className="text-sm font-bold text-bci-ink flex-shrink-0">Período:</span>
+        <div className="flex flex-wrap rounded-xl border border-bci-line bg-white p-1 gap-0.5">
           {(['dia', 'semana', 'mes', '3meses', '6meses', 'ano'] as ReportPeriod[]).map((p) => (
             <button
               key={p}
