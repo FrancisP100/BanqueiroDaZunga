@@ -99,7 +99,7 @@ export type Notification = {
   createdAt: string;
 };
 
-export type ReportPeriod = "dia" | "semana" | "mes" | "ano";
+export type ReportPeriod = "dia" | "semana" | "mes" | "3meses" | "6meses" | "ano";
 
 export type ReportSummary = {
   periodo: ReportPeriod;

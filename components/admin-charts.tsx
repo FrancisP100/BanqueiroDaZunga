@@ -7,7 +7,8 @@ import {
   Tooltip, ResponsiveContainer, LineChart, Line,
   Legend, PieChart, Pie, Cell,
 } from 'recharts';
-import { Users, Store, Building2, MapPin } from 'lucide-react';
+import { Users, Store, Building2, MapPin, Calendar } from 'lucide-react';
+import type { ReportPeriod } from '@/lib/types';
 
 interface StatsData {
   totalBanqueiros: number;
@@ -39,8 +40,11 @@ export function AdminCharts() {
   const [mercados, setMercados] = useState<any[]>([]);
   const [balcoes, setBalcoes] = useState<any[]>([]);
 
+  // Período selecionado
+  const [period, setPeriod] = useState<ReportPeriod>('semana');
+
   // Dados detalhados por filtro
-  const [contasSemana, setContasSemana] = useState<any[]>([]);
+  const [contasPeriodo, setContasPeriodo] = useState<any[]>([]);
   const [porProvincia, setPorProvincia] = useState<ProvinciaData[]>([]);
   const [porMercado, setPorMercado] = useState<any[]>([]);
   const [porBanqueiro, setPorBanqueiro] = useState<any[]>([]);
@@ -95,6 +99,31 @@ export function AdminCharts() {
   }, []);
 
   // Carregar dados detalhados sempre que os filtros mudam
+  // Helper para calcular o início do período
+  function getPeriodStart(p: ReportPeriod): Date {
+    const now = new Date();
+    const d = new Date(now);
+    switch (p) {
+      case 'dia': d.setDate(now.getDate() - 1); break;
+      case 'semana': d.setDate(now.getDate() - 7); break;
+      case 'mes': d.setMonth(now.getMonth() - 1); break;
+      case '3meses': d.setMonth(now.getMonth() - 3); break;
+      case '6meses': d.setMonth(now.getMonth() - 6); break;
+      case 'ano': d.setFullYear(now.getFullYear() - 1); break;
+    }
+    return d;
+  }
+
+  // Labels para exibição
+  const periodLabel: Record<ReportPeriod, string> = {
+    dia: 'Hoje',
+    semana: '7 dias',
+    mes: '30 dias',
+    '3meses': '3 meses',
+    '6meses': '6 meses',
+    ano: '1 ano',
+  };
+
   useEffect(() => {
     async function loadFiltered() {
       setLoading(true);
@@ -116,7 +145,7 @@ export function AdminCharts() {
           setPorBanqueiro([]);
           setPorLider([]);
           setPacotesData([]);
-          setContasSemana([]);
+          setContasPeriodo([]);
           setLoading(false);
           return;
         }
@@ -157,31 +186,33 @@ export function AdminCharts() {
           }))
         );
 
-        // Últimos 7 dias
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-        const since = sevenDaysAgo.toISOString();
+        // Contas por período
+        const periodStart = getPeriodStart(period);
+        const since = periodStart.toISOString();
 
-        const { data: recentAccounts } = await supabase
+        const { data: periodAccounts } = await supabase
           .from('accounts')
           .select('created_at, mercado_id')
           .gte('created_at', since)
           .in('mercado_id', mercadoIds);
 
-        const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
+        // Agrupar por dia para o gráfico
         const contasPorDia: Record<string, number> = {};
         const hoje = new Date();
-        for (let i = 6; i >= 0; i--) {
+        const diffDays = Math.ceil((Date.now() - periodStart.getTime()) / (1000 * 60 * 60 * 24));
+        const numDias = Math.min(diffDays, 365);
+        for (let i = numDias - 1; i >= 0; i--) {
           const d = new Date(hoje);
           d.setDate(hoje.getDate() - i);
-          contasPorDia[diasSemana[d.getDay()]] = 0;
+          const key = d.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' });
+          contasPorDia[key] = 0;
         }
-        (recentAccounts ?? []).forEach((a: { created_at: string }) => {
+        (periodAccounts ?? []).forEach((a: { created_at: string }) => {
           const d = new Date(a.created_at);
-          const key = diasSemana[d.getDay()];
+          const key = d.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' });
           if (contasPorDia[key] !== undefined) contasPorDia[key]++;
         });
-        setContasSemana(
+        setContasPeriodo(
           Object.entries(contasPorDia).map(([nome, contas]) => ({ nome, contas }))
         );
 
@@ -239,7 +270,7 @@ export function AdminCharts() {
       loadFiltered();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedProvincia, selectedMercado, selectedBalcao, mercados.length]);
+  }, [selectedProvincia, selectedMercado, selectedBalcao, mercados.length, period]);
 
   // Filtrar mercados por província seleccionada para os dropdowns
   const mercadosFiltrados = selectedProvincia === 'todas'
@@ -267,6 +298,27 @@ export function AdminCharts() {
 
   return (
     <div className="space-y-8">
+      {/* Filtro de período */}
+      <div className="flex flex-wrap items-center gap-3 p-4 rounded-2xl border border-bci-line bg-white">
+        <Calendar size={18} className="text-bci-magenta" />
+        <span className="text-sm font-bold text-bci-ink">Período:</span>
+        <div className="flex rounded-xl border border-bci-line bg-white p-1">
+          {(['dia', 'semana', 'mes', '3meses', '6meses', 'ano'] as ReportPeriod[]).map((p) => (
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-colors ${
+                period === p
+                  ? 'bg-bci-magenta text-white'
+                  : 'text-gray-500 hover:bg-pink-50'
+              }`}
+            >
+              {periodLabel[p]}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Filtros de localização */}
       <div className="flex flex-wrap items-center gap-3 p-4 rounded-2xl border border-bci-line bg-white">
         <MapPin size={18} className="text-bci-magenta" />
@@ -342,19 +394,19 @@ export function AdminCharts() {
         </div>
       )}
 
-      {/* Gráfico de Contas por Semana */}
+      {/* Gráfico de Contas por Período */}
       <div className="rounded-2xl border border-bci-line bg-white p-6 shadow-card">
         <h3 className="text-sm font-bold text-bci-ink mb-4">
-          Abertura de Contas (Últimos 7 dias)
+          Abertura de Contas ({periodLabel[period]})
         </h3>
         <div className="h-64 w-full">
-          {contasSemana.length === 0 || contasSemana.every((d) => d.contas === 0) ? (
+          {contasPeriodo.length === 0 || contasPeriodo.every((d) => d.contas === 0) ? (
             <div className="flex h-full items-center justify-center text-sm text-bci-muted">
               Sem dados de contas para o período.
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={contasSemana} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+              <LineChart data={contasPeriodo} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
                 <XAxis dataKey="nome" tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} allowDecimals={false} />
