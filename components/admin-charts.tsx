@@ -7,8 +7,9 @@ import {
   Tooltip, ResponsiveContainer, LineChart, Line,
   Legend, PieChart, Pie, Cell,
 } from 'recharts';
-import { Users, Store, Building2, MapPin, Calendar } from 'lucide-react';
+import { Users, Store, Building2, MapPin, Calendar, CheckCircle, Clock, XCircle } from 'lucide-react';
 import type { ReportPeriod } from '@/lib/types';
+import { PresenceBadge, PunctualityBadge } from '@/components/ui/status-badge';
 
 interface StatsData {
   totalBanqueiros: number;
@@ -42,6 +43,13 @@ export function AdminCharts() {
 
   // Período selecionado
   const [period, setPeriod] = useState<ReportPeriod>('semana');
+
+  // Presença monitoramento
+  const [presenceDate, setPresenceDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [presenceList, setPresenceList] = useState<any[]>([]);
+  const [noRecordList, setNoRecordList] = useState<any[]>([]);
+  const [presenceStats, setPresenceStats] = useState({ presentes: 0, atrasos: 0, faltas: 0 });
+  const [presenceLoading, setPresenceLoading] = useState(false);
 
   // Dados detalhados por filtro
   const [contasPeriodo, setContasPeriodo] = useState<any[]>([]);
@@ -98,7 +106,6 @@ export function AdminCharts() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Carregar dados detalhados sempre que os filtros mudam
   // Helper para calcular o início do período
   function getPeriodStart(p: ReportPeriod): Date {
     const now = new Date();
@@ -133,7 +140,6 @@ export function AdminCharts() {
         const prov = selectedProvincia !== 'todas' ? selectedProvincia : null;
         const mkt = selectedMercado !== 'todos' ? selectedMercado : null;
 
-        // Mercados filtrados pela selecção
         let mercadosFiltrados = marketsAll;
         if (prov) mercadosFiltrados = mercadosFiltrados.filter((m: any) => m.provincia === prov);
         if (mkt) mercadosFiltrados = mercadosFiltrados.filter((m: any) => m.id === mkt);
@@ -150,7 +156,6 @@ export function AdminCharts() {
           return;
         }
 
-        // Contas filtradas pelos mercados
         const { data: accsFiltradas } = await supabase
           .from('accounts')
           .select('id, status, tpa_status, pacote, created_at, mercado_id, banqueiro_id')
@@ -196,7 +201,6 @@ export function AdminCharts() {
           .gte('created_at', since)
           .in('mercado_id', mercadoIds);
 
-        // Agrupar por dia para o gráfico
         const contasPorDia: Record<string, number> = {};
         const hoje = new Date();
         const diffDays = Math.ceil((Date.now() - periodStart.getTime()) / (1000 * 60 * 60 * 24));
@@ -265,12 +269,65 @@ export function AdminCharts() {
       }
     }
 
-    // Só carregar depois de ter mercados
     if (mercados.length > 0) {
       loadFiltered();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProvincia, selectedMercado, selectedBalcao, mercados.length, period]);
+
+  // Carregar dados de presença para a data selecionada
+  useEffect(() => {
+    async function loadPresences() {
+      setPresenceLoading(true);
+
+      try {
+        const [profilesRes, presencesRes, marketsRes] = await Promise.all([
+          supabase.from('profiles').select('id, nome, local_id').eq('papel', 'banqueiro'),
+          supabase.from('presences')
+            .select('id, profile_id, entrada, saida, status, pontualidade, origem, profiles(nome), markets(nome)')
+            .eq('data', presenceDate),
+          supabase.from('markets').select('id, nome'),
+        ]);
+
+        const banqueiros = (profilesRes.data ?? []).map((b: any) => ({
+          id: b.id,
+          nome: b.nome,
+          mercadoNome: marketsRes.data?.find((m: any) => m.id === b.local_id)?.nome || '—',
+        }));
+
+        const presences = (presencesRes.data ?? []).map((row: any) => ({
+          id: row.id,
+          profileId: row.profile_id,
+          nome: Array.isArray(row.profiles) ? (row.profiles[0]?.nome ?? '') : (row.profiles?.nome ?? ''),
+          mercadoNome: Array.isArray(row.markets) ? (row.markets[0]?.nome ?? '-') : (row.markets?.nome ?? '-'),
+          entrada: row.entrada ? String(row.entrada).slice(0, 5) : null,
+          saida: row.saida ? String(row.saida).slice(0, 5) : null,
+          status: row.status,
+          pontualidade: row.pontualidade,
+          origem: row.origem,
+        }));
+
+        setPresenceList(presences);
+
+        const presenceProfileIds = new Set(presences.map((p: any) => p.profileId));
+        const semRegisto = banqueiros.filter((b: any) => !presenceProfileIds.has(b.id));
+        setNoRecordList(semRegisto);
+
+        setPresenceStats({
+          presentes: presences.filter((p: any) => p.status === 'no_local').length,
+          atrasos: presences.filter((p: any) => p.pontualidade === 'atraso').length,
+          faltas: presences.filter((p: any) => p.status === 'falta').length,
+        });
+      } catch (err) {
+        console.error('Erro ao carregar presenças:', err);
+      } finally {
+        setPresenceLoading(false);
+      }
+    }
+
+    loadPresences();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presenceDate]);
 
   // Filtrar mercados por província seleccionada para os dropdowns
   const mercadosFiltrados = selectedProvincia === 'todas'
@@ -420,7 +477,6 @@ export function AdminCharts() {
 
       {/* Dois gráficos lado a lado: Pacotes e Províncias */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Pacotes vendidos (classes Zungueira) */}
         <div className="rounded-2xl border border-bci-line bg-white p-6 shadow-card">
           <h3 className="text-sm font-bold text-bci-ink mb-4">
             Classes Zungueira Vendidas
@@ -455,7 +511,6 @@ export function AdminCharts() {
           )}
         </div>
 
-        {/* Contas por Província */}
         <div className="rounded-2xl border border-bci-line bg-white p-6 shadow-card">
           <h3 className="text-sm font-bold text-bci-ink mb-4">
             Contas por Província
@@ -484,7 +539,6 @@ export function AdminCharts() {
 
       {/* Top Banqueiros e Líderes */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Banqueiros */}
         <div className="rounded-2xl border border-bci-line bg-white shadow-card overflow-hidden">
           <div className="px-5 py-4 border-b border-bci-line">
             <h3 className="font-extrabold text-bci-ink text-sm">Top Bankeiros</h3>
@@ -511,7 +565,6 @@ export function AdminCharts() {
           )}
         </div>
 
-        {/* Líderes */}
         <div className="rounded-2xl border border-bci-line bg-white shadow-card overflow-hidden">
           <div className="px-5 py-4 border-b border-bci-line">
             <h3 className="font-extrabold text-bci-ink text-sm">Líderes Registados</h3>
@@ -537,6 +590,130 @@ export function AdminCharts() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Monitoramento de Presenças */}
+      <div className="rounded-2xl border border-bci-line bg-white p-6 shadow-card">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-bci-navySoft text-bci-navy">
+            <CheckCircle size={18} />
+          </div>
+          <div>
+            <p className="font-extrabold text-bci-ink">Mapa de Presenças</p>
+            <p className="text-xs text-bci-muted">Monitoramento de presenças e faltas dos banqueiros</p>
+          </div>
+        </div>
+
+        {/* Date picker */}
+        <div className="flex items-center gap-3 mb-4">
+          <label className="text-sm font-bold text-bci-ink">
+            Data:
+            <input
+              type="date"
+              value={presenceDate}
+              onChange={(e) => setPresenceDate(e.target.value)}
+              className="ml-2 rounded-xl border border-bci-line px-3 py-2 text-sm font-medium outline-none focus:border-bci-navy focus:ring-4 focus:ring-bci-navySoft"
+            />
+          </label>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+          <div className="rounded-xl border border-bci-line bg-white p-4 text-center">
+            <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-emerald-600 bg-emerald-50 mx-auto mb-1">
+              <CheckCircle size={16} />
+            </div>
+            <p className="text-xl font-extrabold text-bci-ink">{presenceLoading ? '—' : presenceStats.presentes}</p>
+            <p className="text-[10px] font-semibold text-bci-muted uppercase">Presentes</p>
+          </div>
+          <div className="rounded-xl border border-bci-line bg-white p-4 text-center">
+            <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-amber-600 bg-amber-50 mx-auto mb-1">
+              <Clock size={16} />
+            </div>
+            <p className="text-xl font-extrabold text-bci-ink">{presenceLoading ? '—' : presenceStats.atrasos}</p>
+            <p className="text-[10px] font-semibold text-bci-muted uppercase">Atrasos</p>
+          </div>
+          <div className="rounded-xl border border-bci-line bg-white p-4 text-center">
+            <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-red-600 bg-red-50 mx-auto mb-1">
+              <XCircle size={16} />
+            </div>
+            <p className="text-xl font-extrabold text-bci-ink">{presenceLoading ? '—' : presenceStats.faltas}</p>
+            <p className="text-[10px] font-semibold text-bci-muted uppercase">Faltas</p>
+          </div>
+          <div className="rounded-xl border border-bci-line bg-white p-4 text-center">
+            <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-600 bg-gray-50 mx-auto mb-1">
+              <Users size={16} />
+            </div>
+            <p className="text-xl font-extrabold text-bci-ink">{presenceLoading ? '—' : noRecordList.length}</p>
+            <p className="text-[10px] font-semibold text-bci-muted uppercase">Sem registo</p>
+          </div>
+        </div>
+
+        {/* Tabela de presenças */}
+        <div className="rounded-xl border border-bci-line overflow-hidden mb-4">
+          <div className="px-4 py-3 border-b border-bci-line">
+            <h4 className="font-bold text-sm text-bci-ink">Registos de presença de {presenceDate}</h4>
+          </div>
+          {presenceLoading ? (
+            <p className="py-8 text-center text-sm text-bci-muted">A carregar presenças...</p>
+          ) : presenceList.length === 0 ? (
+            <p className="py-8 text-center text-sm text-bci-muted">Sem registos de presença para esta data.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-50 text-xs uppercase text-bci-muted">
+                  <tr>
+                    <th className="px-4 py-3">Bankeiro</th>
+                    <th className="px-4 py-3">Mercado</th>
+                    <th className="px-4 py-3">Entrada</th>
+                    <th className="px-4 py-3">Saída</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Pontualidade</th>
+                    <th className="px-4 py-3">Origem</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {presenceList.map((p) => (
+                    <tr key={p.id} className="border-t border-bci-line">
+                      <td className="px-4 py-3 font-bold">{p.nome}</td>
+                      <td className="px-4 py-3 text-bci-muted">{p.mercadoNome}</td>
+                      <td className="px-4 py-3">{p.entrada ?? '—'}</td>
+                      <td className="px-4 py-3">{p.saida ?? '—'}</td>
+                      <td className="px-4 py-3"><PresenceBadge value={p.status} /></td>
+                      <td className="px-4 py-3"><PunctualityBadge value={p.pontualidade} /></td>
+                      <td className="px-4 py-3"><span className="text-xs font-semibold text-bci-muted capitalize">{p.origem}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Bankeiros sem registo */}
+        {!presenceLoading && noRecordList.length > 0 && (
+          <div className="rounded-xl border border-bci-line overflow-hidden">
+            <div className="px-4 py-3 border-b border-bci-line">
+              <h4 className="font-bold text-sm text-bci-ink">Bankeiros sem presença ({noRecordList.length})</h4>
+              <p className="text-xs text-bci-muted mt-0.5">Banqueiros sem registo de presença para esta data.</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-50 text-xs uppercase text-bci-muted">
+                  <tr><th className="px-4 py-3">Nome</th><th className="px-4 py-3">Mercado</th></tr>
+                </thead>
+                <tbody>
+                  {noRecordList.map((b: any) => (
+                    <tr key={b.id} className="border-t border-bci-line">
+                      <td className="px-4 py-3 font-bold">{b.nome}</td>
+                      <td className="px-4 py-3 text-bci-muted">{b.mercadoNome}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
