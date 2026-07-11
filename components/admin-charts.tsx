@@ -100,6 +100,8 @@ export function AdminCharts() {
 
       } catch (err) {
         console.error('Erro ao carregar estatísticas:', err);
+      } finally {
+        setLoading(false);
       }
     }
     loadInitial();
@@ -269,6 +271,8 @@ export function AdminCharts() {
       }
     }
 
+    // Só carrega dados filtrados se já tivermos mercados carregados
+    // (após loadInitial() terminar, o mercados.length >= 1 se houver mercados na BD)
     if (mercados.length > 0) {
       loadFiltered();
     }
@@ -338,7 +342,7 @@ export function AdminCharts() {
     ? []
     : mercadosFiltrados.filter((m: any) => m.id === selectedMercado);
 
-  if (loading) {
+  if (loading && !stats) {
     return (
       <div className="flex h-64 items-center justify-center text-sm text-bci-muted">
         A carregar estatísticas...
