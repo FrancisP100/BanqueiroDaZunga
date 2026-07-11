@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { createBrowserClient } from '@/lib/supabase/client';
@@ -16,60 +16,68 @@ export default function AdminInspecionarBanqueiro() {
   const [presencas, setPresencas] = useState<any[]>([]);
   const [contas, setContas] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   );
 
-  const loadData = useCallback(async () => {
-    if (!id || typeof id !== "string") {
-      setError("ID inválido.");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      const [profileRes, presRes, accsRes] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("*, markets(nome, provincia)")
-          .eq("id", id)
-          .single(),
-        supabase
-          .from("presences")
-          .select("*")
-          .eq("profile_id", id)
-          .order("data", { ascending: false })
-          .limit(30),
-        supabase
-          .from("accounts")
-          .select(
-            "id, pacote, status, tpa_status, created_at, hora_abertura, clientes(nome, bi)",
-          )
-          .eq("banqueiro_id", id)
-          .order("created_at", { ascending: false }),
-      ]);
-
-      if (profileRes.error) throw profileRes.error;
-
-      setBanqueiro(profileRes.data);
-      setPresencas(presRes.data ?? []);
-      setContas(accsRes.data ?? []);
-    } catch (err: unknown) {
-      console.error("Erro ao carregar banqueiro:", err);
-      setError(err instanceof Error ? err.message : "Falha ao carregar os dados.");
-    } finally {
-      setLoading(false);
-    }
-  }, [id, supabase]);
-
   useEffect(() => {
+    let ignore = false;
+
+    async function loadData() {
+      if (!id || typeof id !== "string") {
+        if (!ignore) setError("ID inválido.");
+        if (!ignore) setLoading(false);
+        return;
+      }
+
+      try {
+        if (!ignore) setLoading(true);
+        if (!ignore) setError(null);
+
+        const [profileRes, presRes, accsRes] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("*, markets(nome, provincia)")
+            .eq("id", id)
+            .single(),
+          supabase
+            .from("presences")
+            .select("*")
+            .eq("profile_id", id)
+            .order("data", { ascending: false })
+            .limit(30),
+          supabase
+            .from("accounts")
+            .select(
+              "id, pacote, status, tpa_status, created_at, hora_abertura, clientes(nome, bi)",
+            )
+            .eq("banqueiro_id", id)
+            .order("created_at", { ascending: false }),
+        ]);
+
+        if (profileRes.error) throw profileRes.error;
+
+        if (!ignore) {
+          setBanqueiro(profileRes.data);
+          setPresencas(presRes.data ?? []);
+          setContas(accsRes.data ?? []);
+        }
+      } catch (err: unknown) {
+        if (!ignore) {
+          console.error("Erro ao carregar banqueiro:", err);
+          setError(err instanceof Error ? err.message : "Falha ao carregar os dados.");
+        }
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    }
+
     loadData();
-  }, [loadData]);
+    return () => { ignore = true; };
+  }, [id, supabase, refreshKey]);
 
   if (loading) {
     return (
@@ -90,7 +98,7 @@ export default function AdminInspecionarBanqueiro() {
         >
           Voltar à lista
         </Link>
-        <button onClick={loadData} className="mt-4 ml-4 underline text-bci-magenta">
+        <button onClick={() => setRefreshKey(k => k + 1)} className="mt-4 ml-4 underline text-bci-magenta">
           Tentar novamente
         </button>
       </div>

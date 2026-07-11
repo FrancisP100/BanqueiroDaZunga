@@ -25,7 +25,10 @@ export default function EditarPerfilPage() {
   );
 
   useEffect(() => {
+    let ignore = false;
+
     if (!id || typeof id !== "string") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setError("ID inválido.");
       setLoading(false);
       return;
@@ -37,6 +40,7 @@ export default function EditarPerfilPage() {
       .eq("id", id)
       .single()
       .then(({ data, error: err }) => {
+        if (ignore) return;
         if (err) {
           setError("Erro ao carregar perfil: " + err.message);
         } else {
@@ -44,6 +48,8 @@ export default function EditarPerfilPage() {
         }
         setLoading(false);
       });
+
+    return () => { ignore = true; };
   }, [id, supabase]);
 
   // Redirecionar apenas APÓS submissão bem-sucedida (não no carregamento inicial)

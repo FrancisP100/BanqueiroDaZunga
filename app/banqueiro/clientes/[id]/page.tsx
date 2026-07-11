@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { createBrowserClient } from '@/lib/supabase/client';
@@ -26,6 +26,8 @@ export default function InspecionarCliente() {
   const [contas, setContas] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isPending, setPending] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [silentReload, setSilentReload] = useState(0);
 
   // Edit dialog
   const [editOpen, setEditOpen] = useState(false);
@@ -41,20 +43,19 @@ export default function InspecionarCliente() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   );
 
-  const loadData = useCallback(async (refresh = false) => {
-    if (!id || typeof id !== "string") {
-      setError("ID inválido.");
-      setLoading(false);
-      return;
-    }
+  useEffect(() => {
+    let ignore = false;
+    const silent = silentReload > 0;
 
-    try {
-      if (refresh) {
-        // silent refresh — não mostra loading nem error
-      } else {
-        setLoading(true);
-        setError(null);
+    async function loadData() {
+      if (!id || typeof id !== "string") {
+        if (!ignore) setError("ID inválido.");
+        if (!ignore) setLoading(false);
+        return;
       }
+
+      if (!silent && !ignore) setLoading(true);
+      if (!silent && !ignore) setError(null);
 
       const { data: clienteData, error: clienteErr } = await supabase
         .from("clientes")
@@ -63,19 +64,17 @@ export default function InspecionarCliente() {
         .single();
 
       if (clienteErr) {
-        if (refresh) {
+        if (!ignore) {
           console.error("Erro ao actualizar dados:", clienteErr);
-          return;
+          throw clienteErr;
         }
-        throw clienteErr;
-      }
-      setCliente(clienteData);
-
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth.user) {
-        if (refresh) return;
         return;
       }
+
+      if (!ignore) setCliente(clienteData);
+
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user || ignore) return;
 
       const { data: profile } = await supabase
         .from("profiles")
@@ -83,7 +82,7 @@ export default function InspecionarCliente() {
         .eq("id", auth.user.id)
         .single();
 
-      if (profile) {
+      if (profile && !ignore) {
         const { data: accountsData } = await supabase
           .from("accounts")
           .select("*, markets(nome)")
@@ -93,25 +92,30 @@ export default function InspecionarCliente() {
 
         setContas(accountsData ?? []);
       }
-    } catch (err: unknown) {
-      console.error("Erro ao carregar cliente:", err);
-      if (!refresh) {
+    }
+
+    loadData().catch((err: unknown) => {
+      if (!ignore) {
+        console.error("Erro ao carregar cliente:", err);
         setError(err instanceof Error ? err.message : "Falha ao carregar dados.");
       }
-    } finally {
-      if (refresh) return;
-      setLoading(false);
-    }
-  }, [id, supabase]);
+    }).finally(() => {
+      if (!ignore) setLoading(false);
+    });
 
-  useEffect(() => { loadData(false); }, [loadData]);
+    return () => { ignore = true; };
+  }, [id, supabase, refreshKey, silentReload]);
+
+  async function loadDataSilent() {
+    setSilentReload(k => k + 1);
+  }
 
   async function handleActivate(contaId: string) {
     setPending(true);
     try {
       const result = await ativarConta(contaId);
       if (result.error) { alert(result.error); return; }
-      await loadData(true);
+      await loadDataSilent();
     } finally {
       setPending(false);
     }
@@ -123,7 +127,7 @@ export default function InspecionarCliente() {
       const newStatus = currentStatus === "entregue" ? "pendente" : "entregue";
       const result = await atualizarTpaStatus(contaId, newStatus as "pendente" | "entregue");
       if (result.error) { alert(result.error); return; }
-      await loadData(true);
+      await loadDataSilent();
     } finally {
       setPending(false);
     }
@@ -163,7 +167,7 @@ export default function InspecionarCliente() {
     }
 
     setEditOpen(false);
-    await loadData(true);
+    await loadDataSilent();
     setPending(false);
   }
 
@@ -186,7 +190,7 @@ export default function InspecionarCliente() {
     if (deleteTarget.type === "cliente") {
       router.push("/banqueiro/clientes");
     } else {
-      await loadData(true);
+      await loadDataSilent();
     }
   }
 
@@ -205,7 +209,7 @@ export default function InspecionarCliente() {
         <Link href="/banqueiro/clientes" className="mt-4 inline-block text-bci-magenta underline">
           Voltar à lista
         </Link>
-        <button onClick={() => loadData(false)} className="mt-4 ml-4 underline text-bci-magenta">
+        <button onClick={() => setRefreshKey(k => k + 1)} className="mt-4 ml-4 underline text-bci-magenta">
           Tentar novamente
         </button>
       </div>

@@ -31,8 +31,6 @@ export default function LiderDashboard() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  useEffect(() => { loadData(date); /* eslint-disable-next-line */ }, [date]);
-
   async function loadData(d: string) {
     setLoading(true);
 
@@ -73,6 +71,14 @@ export default function LiderDashboard() {
     setPresences(presList);
     setLoading(false);
   }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadData(date);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [date]);
+
+  
 
   const presenceIds = new Set(presences.map((p) => p.profileId));
   const presentCount = presences.filter((p) => p.status === 'no_local').length;

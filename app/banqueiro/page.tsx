@@ -144,6 +144,7 @@ export default function BanqueiroDashboard() {
       );
       return () => navigator.geolocation.clearWatch(watchId);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const marcarPresenca = async () => {
@@ -472,7 +473,7 @@ export default function BanqueiroDashboard() {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">
-                TPA's Entregues
+                TPA&apos;s Entregues
               </p>
               <h3 className="text-2xl font-bold text-gray-900">
                 {stats.tpaEntregues}
@@ -487,7 +488,7 @@ export default function BanqueiroDashboard() {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">
-                TPA's Pendentes
+                TPA&apos;s Pendentes
               </p>
               <h3 className="text-2xl font-bold text-gray-900">
                 {stats.tpaPendentes}
@@ -500,7 +501,7 @@ export default function BanqueiroDashboard() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-gray-800">
-            TPA's pendentes e entregues
+            TPA&apos;s pendentes e entregues
           </CardTitle>
         </CardHeader>
         <CardContent className="h-64">

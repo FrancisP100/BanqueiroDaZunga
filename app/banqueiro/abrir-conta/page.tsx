@@ -35,11 +35,15 @@ export default function AbrirConta() {
 
   // Verificar integrações disponíveis ao montar o componente
   useEffect(() => {
-    setIntegrations({
+    let ignore = false;
+    const integrations = {
       biValidator: registry.getBiValidator() !== null,
       documentStorage: registry.getDocumentStorage() !== null,
       banking: registry.getBankingIntegration() !== null,
-    });
+    };
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIntegrations(integrations);
+    return () => { ignore = true; };
   }, []);
 
   const [formData, setFormData] = useState({
@@ -251,9 +255,8 @@ export default function AbrirConta() {
       <Card>
         <CardHeader className="bg-bci-dark text-white rounded-t-xl">
           <CardTitle className="text-2xl">Abrir Nova Conta</CardTitle>
-          <CardDescription className="text-white/80">
-            A conta é criada como <b>pendente</b> — active-a depois em "Meus
-            Clientes"
+          <CardDescription className="text-white/80">              A conta é criada como <b>pendente</b> — active-a depois em &quot;Meus
+            Clientes&quot;
           </CardDescription>
         </CardHeader>
         <CardContent className="p-6">
@@ -352,9 +355,7 @@ export default function AbrirConta() {
                 </Select>
               </div>
               <p className="text-sm text-gray-500">
-                O TPA fica automaticamente como <b>pendente</b> — pode alterá-lo
-                para &quot;entregue&quot; depois, no painel de Clientes.
-              </p>
+                O TPA fica automaticamente como <b>pendente</b> — pode alterá-lo                para &quot;entregue&quot; depois, no painel de Clientes.</p>
             </div>
 
             <div className="pt-6">

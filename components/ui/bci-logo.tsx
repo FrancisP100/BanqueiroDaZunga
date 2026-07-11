@@ -1,11 +1,15 @@
+import Image from "next/image";
+
 export function BciLogo({ className = "" }: { className?: string }) {
   return (
     <div className={`relative overflow-hidden ${className}`}>
-      <img
+      <Image
         src="/Logo1.png"
         alt="BCI Logo"
         className="h-full w-full object-contain"
-        loading="eager"
+        width={200}
+        height={60}
+        priority
       />
     </div>
   );

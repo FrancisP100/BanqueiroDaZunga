@@ -21,10 +21,6 @@ export default function GestaoClientes() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   );
 
-  useEffect(() => {
-    loadClientes();
-  }, []);
-
   const loadClientes = async () => {
     setLoading(true);
     const {
@@ -76,6 +72,12 @@ export default function GestaoClientes() {
     setLoading(false);
   };
 
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadClientes();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const filteredClientes = clientes.filter(
     (c) =>
       c.bi.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -85,6 +87,7 @@ export default function GestaoClientes() {
   // Número total de clientes para o header
   useEffect(() => {
     if (clientes.length > 0 && clienteCount === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setClienteCount(clientes.length);
     }
   }, [clientes, clienteCount]);
