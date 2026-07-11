@@ -95,15 +95,15 @@ export default async function AdminDashboard() {
         </div>
       </div>
 
-      {/* Relatórios de Desempenho */}
+      {/* Estatísticas Gerais com Filtros */}
       <div className="rounded-2xl border border-bci-line bg-white p-6 shadow-card">
         <div className="flex items-center gap-3 mb-5">
           <div className="grid h-10 w-10 place-items-center rounded-xl bg-bci-navySoft text-bci-navy">
             <BarChart3 size={18} />
           </div>
           <div>
-            <p className="font-extrabold text-bci-ink">Relatórios de Desempenho</p>
-            <p className="text-xs text-bci-muted">Análise de produtividade e assiduidade global</p>
+            <p className="font-extrabold text-bci-ink">Estatísticas Gerais</p>
+            <p className="text-xs text-bci-muted">Visão global com filtros por província, mercado e balcão</p>
           </div>
         </div>
         

@@ -3,7 +3,7 @@
 import { useEffect, useState, useActionState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { createBrowserClient } from "@supabase/ssr";
+import { createBrowserClient } from '@/lib/supabase/client';
 import { ArrowLeft, Save } from "lucide-react";
 import { editProfile } from "@/app/admin/actions";
 

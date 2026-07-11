@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import { createBrowserClient } from '@/lib/supabase/client';
 import { PresenceBadge, PunctualityBadge } from "@/components/ui/status-badge";
 import { ArrowLeft, CreditCard, MapPin, Phone, Calendar, Building } from "lucide-react";
 

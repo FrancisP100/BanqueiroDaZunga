@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { createBrowserClient } from '@supabase/ssr';
+import { createBrowserClient } from '@/lib/supabase/client';
 import { LayoutDashboard, Users, UserPlus, Bell, LogOut, Menu, X } from 'lucide-react';
 import { BciLogo } from '@/components/ui/bci-logo';
 

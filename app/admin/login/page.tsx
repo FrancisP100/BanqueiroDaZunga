@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import { createBrowserClient } from "@/lib/supabase/client";
 import { LogIn, ShieldCheck } from "lucide-react";
 
 const hasSupabase = Boolean(

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
+import { createBrowserClient } from '@/lib/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { distanceInMeters } from "@/lib/attendance";
@@ -16,6 +16,7 @@ import {
   BellOff,
 } from "lucide-react";
 import { marcarNotificacaoLida } from "@/app/banqueiro/actions";
+import { ChangePasswordModal } from "@/components/change-password-modal";
 import {
   BarChart,
   Bar,
@@ -68,6 +69,10 @@ export default function BanqueiroDashboard() {
   const [actividadeRecente, setActividadeRecente] = useState<any[]>([]);
   const [reportLoading, setReportLoading] = useState(false);
 
+  // Estado para modal de alteração de senha
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [forcePasswordChange, setForcePasswordChange] = useState(false);
+
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -82,10 +87,16 @@ export default function BanqueiroDashboard() {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("id, local_id")
+        .select("id, local_id, force_password_change")
         .eq("id", user.id)
         .single();
       if (!profile) return;
+
+      // Verificar se precisa alterar senha no primeiro login
+      if (profile.force_password_change) {
+        setForcePasswordChange(true);
+        setShowChangePassword(true);
+      }
 
       const { data: accounts } = await supabase
         .from("accounts")
@@ -159,9 +170,11 @@ export default function BanqueiroDashboard() {
         if (!profile) {
           setSubmitting(false);
           return;
-        }
+        }          // Validar distância GPS ao mercado
+        let marketLat = latitude;
+        let marketLng = longitude;
+        let isPrimeiraPresenca = true;
 
-        // Validar distância GPS ao mercado
         if (profile.local_id) {
           const { data: market } = await supabase
             .from("markets")
@@ -181,6 +194,21 @@ export default function BanqueiroDashboard() {
               setSubmitting(false);
               return;
             }
+
+            // ── Verificar se é a PRIMEIRA presença do banqueiro ──
+            const { count } = await supabase
+              .from("presences")
+              .select("*", { count: "exact", head: true })
+              .eq("profile_id", profile.id);
+
+            isPrimeiraPresenca = count === 0;
+
+            // Se for a primeira presença, guardar as coordenadas GPS do mercado
+            // (não as coordenadas do banqueiro)
+            if (isPrimeiraPresenca) {
+              marketLat = market.latitude;
+              marketLng = market.longitude;
+            }
           }
         }
 
@@ -191,16 +219,20 @@ export default function BanqueiroDashboard() {
           profile_id: profile.id,
           data: hoje,
           entrada: hora,
-          latitude,
-          longitude,
+          latitude: marketLat,
+          longitude: marketLng,
           mercado_id: profile.local_id,
           status: "no_local",
           pontualidade: "no_horario",
           origem: "gps",
+          primeira_presenca: isPrimeiraPresenca,
         });
 
         if (!error) {
-          alert("Presença marcada com sucesso!");
+          const msg = isPrimeiraPresenca
+            ? "🎯 Primeira presença registada! Coordenadas do mercado guardadas com sucesso."
+            : "Presença marcada com sucesso!";
+          alert(msg);
           window.location.reload();
         } else alert("Erro ao marcar presença.");
         setSubmitting(false);
@@ -339,6 +371,20 @@ export default function BanqueiroDashboard() {
     );
 
   return (
+    <>
+      {/* Modal de alteração de senha obrigatório no primeiro login */}
+      <ChangePasswordModal
+        open={showChangePassword}
+        onClose={() => {
+          // Se for obrigatório (forcePasswordChange), não deixa fechar
+          if (!forcePasswordChange) setShowChangePassword(false);
+        }}
+        onSuccess={() => {
+          setShowChangePassword(false);
+          setForcePasswordChange(false);
+        }}
+      />
+
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -720,5 +766,6 @@ export default function BanqueiroDashboard() {
       </Card>
 
     </div>
+    </>
   );
 }

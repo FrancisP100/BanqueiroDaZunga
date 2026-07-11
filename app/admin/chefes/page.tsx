@@ -29,7 +29,7 @@ export default async function AdminChefesPage() {
         <ProfileForm
           role="chefe"
           title="Dados do líder"
-          description="Registe um líder para gerir presenças e acompanhar o desempenho dos banqueiros. Associe-o a um mercado/balcão para restringir a sua visão."
+          description="O líder precisa obrigatoriamente de estar associado a um balcão (Mercado local ou Nº do Balcão) para poder acompanhar os banqueiros."
           showMarket
           markets={markets}
           action={registerProfile}

@@ -1,12 +1,11 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { createBrowserClient } from '@supabase/ssr';
+import { createBrowserClient } from '@/lib/supabase/client';
 import { Users, CheckCircle, Clock, XCircle, ClipboardList, Search } from 'lucide-react';
 import { PresenceBadge, PunctualityBadge } from '@/components/ui/status-badge';
 import type { PresenceStatus, Punctuality } from '@/lib/types';
-import { updatePresence, createManualPresence } from '@/app/chefe/actions';
 import { getAllowedMarketIds } from '@/lib/leader-scope';
 
 type PresenceRow = {
@@ -27,15 +26,6 @@ export default function LiderDashboard() {
   const [marketMap, setMarketMap] = useState<Record<string, string>>({});
   const [search, setSearch] = useState('');
 
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [selected, setSelected] = useState<PresenceRow | null>(null);
-  const [selectedBanqueiro, setSelectedBanqueiro] = useState<BanqueiroRow | null>(null);
-  const [newStatus, setNewStatus] = useState<PresenceStatus>('falta');
-  const [newPontualidade, setNewPontualidade] = useState<Punctuality>('falta');
-  const [observacao, setObservacao] = useState('');
-  const [isPending, startTransition] = useTransition();
-  const [submitError, setSubmitError] = useState('');
-
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -54,12 +44,10 @@ export default function LiderDashboard() {
         .eq('data', d),
     ]);
 
-    // Build market map
     const mMap: Record<string, string> = {};
     (mResult.data ?? []).forEach((m: { id: string; nome: string }) => { mMap[m.id] = m.nome; });
     setMarketMap(mMap);
 
-    // Determine which banqueiros this leader can see (same balcão)
     const allowedMarketIds = await getAllowedMarketIds(supabase);
     const canSeeAll = allowedMarketIds.size === 0;
 
@@ -96,30 +84,6 @@ export default function LiderDashboard() {
     b.nome.toLowerCase().includes(search.toLowerCase()) || b.mercadoNome.toLowerCase().includes(search.toLowerCase())
   );
 
-  function openEditDialog(p: PresenceRow) {
-    setSelected(p); setSelectedBanqueiro(null);
-    setNewStatus(p.status); setNewPontualidade(p.pontualidade);
-    setObservacao(''); setSubmitError(''); setDialogOpen(true);
-  }
-  function openCreateDialog(b: BanqueiroRow) {
-    setSelectedBanqueiro(b); setSelected(null);
-    setNewStatus('falta'); setNewPontualidade('falta');
-    setObservacao(''); setSubmitError(''); setDialogOpen(true);
-  }
-  function handleSubmit() {
-    setSubmitError('');
-    startTransition(async () => {
-      let result: { error?: string };
-      if (selected) {
-        result = await updatePresence(selected.id, newStatus, newPontualidade, observacao || undefined);
-      } else if (selectedBanqueiro) {
-        result = await createManualPresence(selectedBanqueiro.id, date, newStatus, newPontualidade, selectedBanqueiro.localId ?? undefined, observacao || undefined);
-      } else return;
-      if (result.error) { setSubmitError(result.error); return; }
-      setDialogOpen(false); loadData(date);
-    });
-  }
-
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -130,9 +94,6 @@ export default function LiderDashboard() {
         <div className="flex gap-3">
           <Link href="/chefe/relatorios" className="flex items-center gap-2 rounded-xl border border-bci-line bg-white px-5 py-2.5 text-sm font-extrabold text-bci-blue hover:bg-bci-blueSoft transition">
             <ClipboardList size={16} /> Relatórios
-          </Link>
-          <Link href="/chefe/presencas" className="flex items-center gap-2 rounded-xl bg-bci-blue px-5 py-2.5 text-sm font-extrabold text-white hover:opacity-90 transition">
-            <ClipboardList size={16} /> Ver todas as presenças
           </Link>
         </div>
       </div>
@@ -145,6 +106,7 @@ export default function LiderDashboard() {
         </label>
       </div>
 
+      {/* Stats apenas visuais — líder NÃO pode editar presenças */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Total Bankeiros', value: banqueiros.length, icon: Users, color: 'text-bci-blue bg-bci-blueSoft' },
@@ -160,10 +122,11 @@ export default function LiderDashboard() {
         ))}
       </div>
 
-      {/* Presences Table — com nome do banqueiro e horário de saída */}
+      {/* Tabela de presenças — APENAS LEITURA */}
       <div className="rounded-2xl border border-bci-line bg-white shadow-card overflow-hidden">
-        <div className="px-5 py-4 border-b border-bci-line">
+        <div className="px-5 py-4 border-b border-bci-line flex items-center justify-between">
           <h2 className="font-extrabold text-bci-ink">Presenças de {date}</h2>
+          <span className="text-xs text-bci-muted">Visualização apenas — gestão pelo Admin</span>
         </div>
         {loading ? (
           <p className="py-10 text-center text-sm text-bci-muted">A carregar presenças…</p>
@@ -181,7 +144,6 @@ export default function LiderDashboard() {
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Pontualidade</th>
                   <th className="px-4 py-3">Origem</th>
-                  <th className="px-4 py-3"></th>
                 </tr>
               </thead>
               <tbody>
@@ -194,9 +156,6 @@ export default function LiderDashboard() {
                     <td className="px-4 py-3"><PresenceBadge value={p.status} /></td>
                     <td className="px-4 py-3"><PunctualityBadge value={p.pontualidade} /></td>
                     <td className="px-4 py-3"><span className="text-xs font-semibold text-bci-muted capitalize">{p.origem}</span></td>
-                    <td className="px-4 py-3">
-                      <button onClick={() => openEditDialog(p)} className="rounded-lg bg-bci-blueSoft px-3 py-1.5 text-xs font-extrabold text-bci-blue hover:bg-bci-blue hover:text-white transition-colors">Corrigir</button>
-                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -205,6 +164,7 @@ export default function LiderDashboard() {
         )}
       </div>
 
+      {/* Bankeiros sem registo — APENAS LEITURA */}
       {!loading && noRecord.length > 0 && (
         <div className="rounded-2xl border border-bci-line bg-white shadow-card overflow-hidden">
           <div className="px-5 py-4 border-b border-bci-line">
@@ -214,16 +174,13 @@ export default function LiderDashboard() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase text-bci-muted">
-                <tr><th className="px-4 py-3">Nome</th><th className="px-4 py-3">Mercado</th><th className="px-4 py-3"></th></tr>
+                <tr><th className="px-4 py-3">Nome</th><th className="px-4 py-3">Mercado</th></tr>
               </thead>
               <tbody>
                 {noRecord.map((b) => (
                   <tr key={b.id} className="border-t border-bci-line">
                     <td className="px-4 py-3 font-bold">{b.nome}</td>
                     <td className="px-4 py-3 text-bci-muted">{b.mercadoNome}</td>
-                    <td className="px-4 py-3">
-                      <button onClick={() => openCreateDialog(b)} className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-extrabold text-red-600 hover:bg-red-600 hover:text-white transition-colors">Marcar Falta</button>
-                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -232,7 +189,7 @@ export default function LiderDashboard() {
         </div>
       )}
 
-      {/* NOVO: lista de todos os banqueiros, com info completa */}
+      {/* Lista de banqueiros */}
       <div className="rounded-2xl border border-bci-line bg-white shadow-card overflow-hidden">
         <div className="px-5 py-4 border-b border-bci-line flex items-center justify-between gap-4">
           <div>
@@ -260,7 +217,7 @@ export default function LiderDashboard() {
                     <td className="px-4 py-3">{pres ? <PresenceBadge value={pres.status} /> : <span className="text-bci-muted text-xs">Sem registo</span>}</td>
                     <td className="px-4 py-3">
                       <Link href={`/chefe/banqueiros/${b.id}`} className="rounded-lg bg-bci-navySoft px-3 py-1.5 text-xs font-extrabold text-bci-navy hover:bg-bci-navy hover:text-white transition-colors">
-                        Inspecionar
+                        Inspeccionar
                       </Link>
                     </td>
                   </tr>
@@ -270,38 +227,6 @@ export default function LiderDashboard() {
           </table>
         </div>
       </div>
-
-      {dialogOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-soft mx-4">
-            <h3 className="text-lg font-extrabold text-bci-ink mb-1">{selected ? 'Correcção Manual' : 'Marcar Falta'}</h3>
-            <p className="text-sm text-bci-muted mb-5">{selected ? selected.nome : selectedBanqueiro?.nome}</p>
-            {submitError && <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">{submitError}</div>}
-            <div className="space-y-4">
-              <label className="block text-sm font-bold text-bci-ink">Status de presença
-                <select value={newStatus} onChange={(e) => setNewStatus(e.target.value as PresenceStatus)}
-                  className="mt-2 w-full rounded-xl border border-bci-line bg-white px-4 py-3 font-medium text-sm outline-none focus:border-bci-blue focus:ring-4 focus:ring-blue-100">
-                  <option value="no_local">No local</option><option value="fora_do_local">Fora do local</option><option value="falta">Falta</option>
-                </select>
-              </label>
-              <label className="block text-sm font-bold text-bci-ink">Pontualidade
-                <select value={newPontualidade} onChange={(e) => setNewPontualidade(e.target.value as Punctuality)}
-                  className="mt-2 w-full rounded-xl border border-bci-line bg-white px-4 py-3 font-medium text-sm outline-none focus:border-bci-blue focus:ring-4 focus:ring-blue-100">
-                  <option value="no_horario">No horário</option><option value="atraso">Atraso</option><option value="falta">Falta</option>
-                </select>
-              </label>
-              <label className="block text-sm font-bold text-bci-ink">Observação (opcional)
-                <textarea value={observacao} onChange={(e) => setObservacao(e.target.value)} rows={2}
-                  className="mt-2 w-full rounded-xl border border-bci-line px-4 py-3 font-medium text-sm outline-none focus:border-bci-blue focus:ring-4 focus:ring-blue-100 resize-none" placeholder="Motivo da correcção..." />
-              </label>
-            </div>
-            <div className="mt-6 flex gap-3">
-              <button onClick={() => setDialogOpen(false)} className="flex-1 rounded-xl border border-bci-line px-4 py-3 text-sm font-extrabold text-bci-muted hover:bg-bci-bg transition-colors">Cancelar</button>
-              <button onClick={handleSubmit} disabled={isPending} className="flex-1 rounded-xl bg-bci-blue px-4 py-3 text-sm font-extrabold text-white hover:opacity-90 transition disabled:opacity-60">{isPending ? 'A guardar...' : 'Guardar'}</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { createBrowserClient } from "@supabase/ssr";
+import { createBrowserClient } from '@/lib/supabase/client';
 import { Search, Users } from "lucide-react";
 import { PresenceBadge } from "@/components/ui/status-badge";
 import type { PresenceStatus } from "@/lib/types";

@@ -4,13 +4,13 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { createBrowserClient } from '@supabase/ssr';
+import { createBrowserClient } from '@/lib/supabase/client';
 import { LayoutDashboard, ClipboardList, Users, Bell, LogOut, Menu, X } from 'lucide-react';
 import { BciLogo } from '@/components/ui/bci-logo';
 
 const navItems = [
   { name: 'Dashboard', href: '/chefe', icon: LayoutDashboard },
-  { name: 'Presenças', href: '/chefe/presencas', icon: ClipboardList },
+  { name: 'Relatórios', href: '/chefe/relatorios', icon: ClipboardList },
   { name: 'Bankeiros', href: '/chefe/banqueiros', icon: Users },
   { name: 'Alertas TPAs', href: '/chefe/notificacoes', icon: Bell },
 ];

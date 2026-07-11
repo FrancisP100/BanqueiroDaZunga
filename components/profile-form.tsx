@@ -26,6 +26,7 @@ export function ProfileForm({
   markets = [],
   action,
 }: ProfileFormProps) {
+  const isLider = role === "chefe";
   const registerAction = action ?? defaultRegisterProfile;
   const [state, formAction, pending] = useActionState(registerAction, null);
 
@@ -39,6 +40,11 @@ export function ProfileForm({
       <label className="text-sm font-bold text-bci-ink md:col-span-2">
         {title}
         <p className="mt-2 text-sm font-medium text-bci-muted">{description}</p>
+        {isLider && (
+          <p className="mt-1 text-xs font-semibold text-bci-magenta">
+            ⚠️ O líder precisa de estar associado a um balcão (Mercado local ou Nº do Balcão)
+          </p>
+        )}
       </label>
 
       {state?.error && typeof state.error === "string" && state.error.length > 0 && (
@@ -99,26 +105,33 @@ export function ProfileForm({
       </label>
       <label className="text-sm font-bold text-bci-ink">
         Número do Balcão
+        {isLider && <span className="text-bci-magenta ml-1">*</span>}
         <input
           name="numero_balcao"
           className="mt-2 w-full rounded-xl border border-bci-line px-4 py-3 font-medium outline-none focus:border-bci-pink focus:ring-4 focus:ring-pink-100"
-          placeholder="BCI-0030"
+          placeholder={isLider ? "BCI-0030 (obrigatório se não escolher mercado)" : "BCI-0030"}
         />
       </label>
-      {showMarket ? (
+      {showMarket || isLider ? (
         <label className="text-sm font-bold text-bci-ink md:col-span-2">
           Mercado local
+          {isLider && <span className="text-bci-magenta ml-1">*</span>}
           <select
             name="local_id"
             className="mt-2 w-full rounded-xl border border-bci-line bg-white px-4 py-3 font-medium outline-none focus:border-bci-pink focus:ring-4 focus:ring-pink-100"
           >
-            <option value="">Nenhum</option>
+            <option value="">{isLider ? "— Selecione um mercado (obrigatório se não tiver Nº Balcão) —" : "Nenhum"}</option>
             {markets.map((market) => (
               <option key={market.id} value={market.id}>
                 {market.nome} — {market.provincia}
               </option>
             ))}
           </select>
+          {isLider && (
+            <p className="mt-1 text-[11px] text-bci-magenta font-medium">
+              Preencha o mercado OU o número do balcão
+            </p>
+          )}
         </label>
       ) : null}
 

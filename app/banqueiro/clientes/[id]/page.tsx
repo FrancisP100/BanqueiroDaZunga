@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import { createBrowserClient } from '@/lib/supabase/client';
 import {
   ArrowLeft, UserCircle, CreditCard, Phone, MapPin, Calendar,
   CheckCircle2, Pencil, Trash2, X, Save

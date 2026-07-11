@@ -33,6 +33,11 @@ export async function registerProfile(
   if (!nome)           return { error: "O nome é obrigatório." };
   if (!codigoInterno)  return { error: "O código interno é obrigatório." };
 
+  // Líder OBRIGATORIAMENTE precisa de um balcão ou mercado
+  if (role === "chefe" && !localId && !numeroBalcao) {
+    return { error: "O líder precisa de estar associado a um balcão. Preencha o 'Mercado local' ou o 'Número do Balcão'." };
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY;
 

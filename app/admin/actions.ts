@@ -13,7 +13,7 @@ async function getAdminClient() {
   if (serviceKey) {
     return createSupabaseClient(supabaseUrl, serviceKey, {
       auth: { autoRefreshToken: false, persistSession: false },
-    });
+    }) as any;
   }
   // Fallback to regular server client (works when RLS is disabled in dev)
   return await createClient();
@@ -59,11 +59,18 @@ export async function registerProfile(
   const localId       = uuidRegex.test(localIdRaw) ? localIdRaw : null;
   const numeroBalcao  = String(formData.get("numero_balcao")  ?? "").trim();
 
+  const isLider = role === "chefe";
+
   if (!email)               return { error: "O email é obrigatório." };
   if (!password)            return { error: "A senha é obrigatória." };
   if (password.length < 6)  return { error: "A senha deve ter pelo menos 6 caracteres." };
   if (!nome)                return { error: "O nome é obrigatório." };
   if (!codigoInterno)       return { error: "O código interno é obrigatório." };
+
+  // Líder OBRIGATORIAMENTE precisa de um balcão ou mercado
+  if (isLider && !localId && !numeroBalcao) {
+    return { error: "O líder precisa de estar associado a um balcão. Preencha o 'Mercado local' ou o 'Número do Balcão'." };
+  }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -101,7 +108,7 @@ export async function registerProfile(
 
   if (serviceKey) {
     const { data: userData, error: createError } =
-      await (adminClient as ReturnType<typeof createSupabaseClient>)
+      await (adminClient as any)
         .auth.admin.createUser({
           email,
           password,
@@ -144,6 +151,8 @@ export async function registerProfile(
   }
 
   // Insert profile
+  const isBanqueiro = role === "banqueiro";
+
   const { error: profileError } = await adminClient.from("profiles").insert({
     id: userId,
     email,
@@ -155,11 +164,12 @@ export async function registerProfile(
     local_id: localId,
     numero_balcao: numeroBalcao || null,
     ativo: true,
+    force_password_change: isBanqueiro, // banqueiros trocam senha no 1º login
   });
 
   if (profileError) {
     if (serviceKey) {
-      await (adminClient as ReturnType<typeof createSupabaseClient>)
+      await (adminClient as any)
         .auth.admin.deleteUser(userId).catch(() => {});
     }
     if (profileError.message.includes("duplicate key") && profileError.message.includes("email")) {
@@ -169,6 +179,16 @@ export async function registerProfile(
       return { error: `O código interno "${codigoInterno}" já está em uso.` };
     }
     return { error: "Erro ao guardar o perfil: " + profileError.message };
+  }
+
+  // ── Se for líder, sincronizar automaticamente os banqueiros do mesmo balcão ──
+  if (isLider && (numeroBalcao || localId)) {
+    await syncBanqueirosToLider(adminClient, userId, numeroBalcao, localId);
+  }
+
+  // ── Se for banqueiro, vincular automaticamente ao líder do seu balcão ──
+  if (isBanqueiro && (numeroBalcao || localId)) {
+    await syncLiderToBanqueiro(adminClient, userId, numeroBalcao, localId);
   }
 
   revalidatePath("/admin");
@@ -199,6 +219,17 @@ export async function editProfile(
 
   const adminClient = await getAdminClient();
 
+  // Verificar se é líder — nesse caso, balcão é obrigatório
+  const { data: perfilAtual } = await adminClient
+    .from("profiles")
+    .select("papel")
+    .eq("id", profileId)
+    .single();
+
+  if (perfilAtual?.papel === "chefe" && !localId && !numeroBalcao) {
+    return { error: "O líder precisa de estar associado a um balcão (Mercado local ou Nº do Balcão)." };
+  }
+
   const { error } = await adminClient
     .from("profiles")
     .update({
@@ -213,6 +244,19 @@ export async function editProfile(
     .eq("id", profileId);
 
   if (error) return { error: "Erro ao actualizar perfil: " + error.message };
+
+  // ── Se editou um líder, ressincronizar os banqueiros ──
+  // Primeiro, limpar leader_id dos banqueiros que já não pertencem a este líder
+  const adminClient2 = await getAdminClient();
+  await adminClient2
+    .from("profiles")
+    .update({ leader_id: null })
+    .eq("leader_id", profileId);
+
+  // Depois, vincular os banqueiros do novo balcão
+  if (localId || numeroBalcao) {
+    await syncBanqueirosToLider(adminClient2, profileId, numeroBalcao, localId);
+  }
 
   revalidatePath("/admin");
   revalidatePath("/admin/banqueiros");
@@ -240,7 +284,7 @@ export async function deleteProfile(profileId: string): Promise<{ error?: string
     const adminAuth = createSupabaseClient(supabaseUrl, serviceKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
-    await (adminAuth as ReturnType<typeof createSupabaseClient>)
+    await (adminAuth as any)
       .auth.admin.deleteUser(profileId).catch(() => {});
   }
 
@@ -285,4 +329,96 @@ export async function updatePunctualityRule(formData: FormData) {
 
   revalidatePath("/admin");
   revalidatePath("/chefe");
+}
+
+// ─── Helpers de sincronização Líder-Banqueiro ───
+
+/**
+ * Quando um líder é registado com um número de balcão, actualiza
+ * o leader_id de todos os banqueiros desse balcão para apontarem
+ * para este líder.
+ */
+async function syncBanqueirosToLider(
+  adminClient: any,
+  leaderId: string,
+  numeroBalcao: string | null,
+  localId: string | null,
+) {
+  let query = adminClient
+    .from("profiles")
+    .select("id, nome")
+    .eq("papel", "banqueiro");
+
+  if (numeroBalcao) {
+    query = query.eq("numero_balcao", numeroBalcao);
+  } else if (localId) {
+    query = query.eq("local_id", localId);
+  } else {
+    return;
+  }
+
+  const { data: banqueiros, error: queryError } = await query;
+  if (queryError) {
+    console.error("[AutoSync] Erro ao consultar banqueiros:", queryError);
+    return;
+  }
+
+  if (!banqueiros || banqueiros.length === 0) {
+    console.log(`[AutoSync] Nenhum banqueiro encontrado para vincular ao líder.`);
+    return;
+  }
+
+  const banqueiroIds = banqueiros.map((b: any) => b.id);
+
+  const { error: updateError } = await adminClient
+    .from("profiles")
+    .update({ leader_id: leaderId })
+    .in("id", banqueiroIds);
+
+  if (updateError) {
+    console.error("[AutoSync] Erro ao vincular banqueiros:", updateError);
+  } else {
+    console.log(
+      `[AutoSync] Líder vinculado a ${banqueiros.length} banqueiro(s): ${banqueiros.map((b: any) => b.nome).join(", ")}`
+    );
+  }
+}
+
+/**
+ * Quando um banqueiro é registado, verifica se já existe um líder
+ * para o seu balcão e, se sim, vincula automaticamente.
+ */
+async function syncLiderToBanqueiro(
+  adminClient: any,
+  banqueiroId: string,
+  numeroBalcao: string | null,
+  localId: string | null,
+) {
+  let query = adminClient
+    .from("profiles")
+    .select("id, nome")
+    .eq("papel", "chefe");
+
+  if (numeroBalcao) {
+    query = query.eq("numero_balcao", numeroBalcao);
+  } else if (localId) {
+    query = query.eq("local_id", localId);
+  } else {
+    return;
+  }
+
+  const { data: lideres, error: queryError } = await query;
+  if (queryError || !lideres || lideres.length === 0) return;
+
+  // Se houver múltiplos líderes para o mesmo balcão, usa o primeiro
+  const lider = lideres[0];
+
+  const { error: updateError } = await adminClient
+    .from("profiles")
+    .update({ leader_id: lider.id })
+    .eq("id", banqueiroId);
+
+  if (!updateError) {
+    console.log(`[AutoSync] Banqueiro vinculado ao líder ${lider.nome}`);
+  }
 }

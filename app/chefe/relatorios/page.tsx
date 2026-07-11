@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createBrowserClient } from '@supabase/ssr';
+import { createBrowserClient } from '@/lib/supabase/client';
 import { FileBarChart, CreditCard, Package, Building2 } from 'lucide-react';
 import type { ReportPeriod } from '@/lib/types';
 import { getAllowedMarketIds } from '@/lib/leader-scope';

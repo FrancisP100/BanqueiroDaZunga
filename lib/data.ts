@@ -33,7 +33,9 @@ export async function getMvpData() {
     provincia: row.provincia ?? undefined,
     localId: row.local_id ?? undefined,
     numeroBalcao: row.numero_balcao ?? undefined,
-    ativo: row.ativo
+    leaderId: row.leader_id ?? undefined,
+    ativo: row.ativo,
+    deveAlterarSenha: row.force_password_change ?? false
   }));
 
   const markets = (marketsResult.data ?? []).map((row): Market => ({

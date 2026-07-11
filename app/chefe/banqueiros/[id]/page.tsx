@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import { createBrowserClient } from '@/lib/supabase/client';
 import { PresenceBadge, PunctualityBadge } from "@/components/ui/status-badge";
 import { ArrowLeft, CreditCard, MapPin, Phone, Calendar, Building } from "lucide-react";
 import { verifyBanqueiroAccess } from "@/lib/leader-scope";
@@ -58,7 +58,7 @@ export default function InspecionarBanqueiro() {
       if (profileRes.error) throw profileRes.error;
 
       // Verify this leader has access to this banqueiro
-      const hasAccess = await verifyBanqueiroAccess(supabase, profileRes.data.local_id);
+      const hasAccess = await verifyBanqueiroAccess(supabase, id as string);
       if (!hasAccess) {
         setError("Não tem permissão para inspeccionar este banqueiro — não pertence ao seu balcão.");
         setLoading(false);

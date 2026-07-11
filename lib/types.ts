@@ -10,7 +10,9 @@ export type Profile = {
   provincia?: string;
   localId?: string;
   numeroBalcao?: string;
+  leaderId?: string;          // ID do líder (chefe) a que este banqueiro está vinculado
   ativo: boolean;
+  deveAlterarSenha?: boolean;
 };
 
 export type Market = {
@@ -24,8 +26,15 @@ export type Market = {
   raioMetros: number;
 };
 
-export const PACOTES = ["Mãezinha", "Mãe", "Mãe Grande", "Mamoite"] as const;
-export type Pacote = (typeof PACOTES)[number];
+/** Pacote único: Zungueira. Dentro dele há classes */
+export const PACOTE_UNICO = "Zungueira";
+
+export const CLASSES_PACOTE = ["Mãezinha", "Mãe", "Mãe Grande", "Mamoite"] as const;
+export type ClassePacote = (typeof CLASSES_PACOTE)[number];
+
+/** Alias para compatibilidade com código existente */
+export const PACOTES = CLASSES_PACOTE;
+export type Pacote = ClassePacote;
 
 export type TpaStatus = "pendente" | "entregue" | "sem_tpa" | "por_entregar";
 
@@ -43,7 +52,8 @@ export type Account = {
   telefone: string;
   celular?: string;
   endereco?: string;
-  pacote: Pacote | string;
+  pacote: Pacote | string;        // classe do pacote (Mãezinha, Mãe, etc)
+  pacoteNome?: string;             // nome do pacote (sempre "Zungueira")
   pacoteStatus?: string;
   tpaStatus: TpaStatus;
   mercadoId: string;
@@ -70,6 +80,7 @@ export type Presence = {
   origem: "gps" | "automatica" | "manual";
   observacao?: string;
   updatedAt?: string;
+  primeiraPresenca?: boolean;
 };
 
 export type PunctualityRule = {
