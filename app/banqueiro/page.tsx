@@ -517,6 +517,9 @@ export default function BanqueiroDashboard() {
                     outerRadius={80}
                     paddingAngle={5}
                     dataKey="value"
+                    animationBegin={0}
+                    animationDuration={1000}
+                    animationEasing="ease-out"
                   >
                     {tpaData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
@@ -640,7 +643,7 @@ export default function BanqueiroDashboard() {
                           <XAxis dataKey="nome" tick={{ fontSize: 10, fill: "#6b7280" }} axisLine={false} tickLine={false} />
                           <YAxis tick={{ fontSize: 10, fill: "#6b7280" }} axisLine={false} tickLine={false} allowDecimals={false} />
                           <RechartsTooltip />
-                          <Bar dataKey="valor" fill="#e91e63" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="valor" fill="#e91e63" radius={[4, 4, 0, 0]} animationBegin={0} animationDuration={800} animationEasing="ease-out" />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>

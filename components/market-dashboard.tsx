@@ -14,7 +14,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend,
 } from "recharts";
 import {
   Store,
@@ -486,6 +485,9 @@ export function MarketDashboard({ market }: { market: Market }) {
                   strokeWidth={3}
                   dot={{ r: 4, fill: "#0f4a8a" }}
                   activeDot={{ r: 6 }}
+                  animationBegin={0}
+                  animationDuration={1200}
+                  animationEasing="ease-out"
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -518,6 +520,9 @@ export function MarketDashboard({ market }: { market: Market }) {
                       paddingAngle={3}
                       dataKey="valor"
                       nameKey="nome"
+                      animationBegin={0}
+                      animationDuration={1000}
+                      animationEasing="ease-out"
                       label={(props: any) =>
                         `${props.name} ${((props.percent ?? 0) * 100).toFixed(0)}%`
                       }
@@ -529,7 +534,6 @@ export function MarketDashboard({ market }: { market: Market }) {
                       )}
                     </Pie>
                     <Tooltip />
-                    <Legend />
                   </PieChart>
                 </ResponsiveContainer>
               </div>

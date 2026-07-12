@@ -472,7 +472,7 @@ export function AdminCharts() {
                 <XAxis dataKey="nome" tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                <Line type="monotone" dataKey="contas" name="Contas" stroke="#0f4a8a" strokeWidth={3} dot={{ r: 4, fill: '#0f4a8a' }} activeDot={{ r: 6 }} />
+                <Line type="monotone" dataKey="contas" name="Contas" stroke="#0f4a8a" strokeWidth={3} dot={{ r: 4, fill: '#0f4a8a' }} activeDot={{ r: 6 }} animationBegin={0} animationDuration={1200} animationEasing="ease-out" />
               </LineChart>
             </ResponsiveContainer>
           )}
@@ -501,6 +501,9 @@ export function AdminCharts() {
                     paddingAngle={3}
                     dataKey="valor"
                     nameKey="nome"
+                    animationBegin={0}
+                    animationDuration={1000}
+                    animationEasing="ease-out"
                     label={(props: any) => `${props.name} ${((props.percent ?? 0) * 100).toFixed(0)}%`}
                   >
                     {pacotesData.map((entry: { nome: string; color?: string }, index: number) => (
@@ -508,7 +511,6 @@ export function AdminCharts() {
                     ))}
                   </Pie>
                   <Tooltip />
-                  <Legend />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -532,8 +534,8 @@ export function AdminCharts() {
                   <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} axisLine={false} tickLine={false} allowDecimals={false} width={30} />
                   <Tooltip />
                   <Legend wrapperStyle={{ fontSize: '11px' }} />
-                  <Bar dataKey="contas" name="Contas" fill="#e91e63" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="banqueiros" name="Bankeiros" fill="#0f4a8a" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="contas" name="Contas" fill="#e91e63" radius={[4, 4, 0, 0]} animationBegin={0} animationDuration={800} animationEasing="ease-out" />
+                  <Bar dataKey="banqueiros" name="Bankeiros" fill="#0f4a8a" radius={[4, 4, 0, 0]} animationBegin={150} animationDuration={800} animationEasing="ease-out" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
