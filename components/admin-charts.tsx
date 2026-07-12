@@ -487,7 +487,7 @@ export function AdminCharts() {
           </h3>
           {pacotesData.length === 0 ? (
             <div className="flex h-48 items-center justify-center text-sm text-bci-muted">
-              Sem dados de pacotes.
+              Sem dados de classes.
             </div>
           ) : (
             <div className="h-48 w-full">

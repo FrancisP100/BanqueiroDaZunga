@@ -333,9 +333,9 @@ export default function AbrirConta() {
             </div>
 
             <div className="space-y-4 pt-4">
-              <h3 className="text-lg font-semibold border-b pb-2">Pacote</h3>
+              <h3 className="text-lg font-semibold border-b pb-2">Classes</h3>
               <div className="space-y-2">
-                <Label htmlFor="pacote">Pacote</Label>
+                <Label htmlFor="pacote">Classe</Label>
                 <Select
                   value={formData.pacote}
                   onValueChange={(val) =>
@@ -343,7 +343,7 @@ export default function AbrirConta() {
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione um pacote" />
+                    <SelectValue placeholder="Selecione uma classe" />
                   </SelectTrigger>
                   <SelectContent>
                     {PACOTES.map((p) => (

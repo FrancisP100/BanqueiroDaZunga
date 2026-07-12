@@ -153,7 +153,7 @@ export default function RelatoriosPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase text-bci-muted">
-                <tr><th className="px-4 py-3">Bankeiro</th><th className="px-4 py-3">Contas/Pacotes</th><th className="px-4 py-3">TPA&apos;s Entregues</th></tr>
+                <tr><th className="px-4 py-3">Bankeiro</th><th className="px-4 py-3">Contas/Classes</th><th className="px-4 py-3">TPA&apos;s Entregues</th></tr>
               </thead>
               <tbody>
                 {Object.entries(porBanqueiro).map(([id, info]) => (
