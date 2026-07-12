@@ -10,6 +10,7 @@ import {
 import { Users, Store, Building2, MapPin, Calendar, CheckCircle, Clock, XCircle } from 'lucide-react';
 import type { ReportPeriod } from '@/lib/types';
 import { PresenceBadge, PunctualityBadge } from '@/components/ui/status-badge';
+import { ChartTooltip } from '@/components/chart-tooltip';
 
 interface StatsData {
   totalBanqueiros: number;
@@ -471,7 +472,7 @@ export function AdminCharts() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
                 <XAxis dataKey="nome" tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} allowDecimals={false} />
-                <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                <Tooltip content={<ChartTooltip />} />
                 <Line type="monotone" dataKey="contas" name="Contas" stroke="#0f4a8a" strokeWidth={3} dot={{ r: 4, fill: '#0f4a8a' }} activeDot={{ r: 6 }} animationBegin={0} animationDuration={1200} animationEasing="ease-out" />
               </LineChart>
             </ResponsiveContainer>
@@ -510,7 +511,7 @@ export function AdminCharts() {
                       <Cell key={index} fill={(PACOTE_CORES as Record<string, string>)[entry.nome] || entry.color || '#e91e63'} />
                     ))}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip content={<ChartTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -532,7 +533,7 @@ export function AdminCharts() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
                   <XAxis dataKey="provincia" tick={{ fontSize: 10, fill: '#6b7280' }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} axisLine={false} tickLine={false} allowDecimals={false} width={30} />
-                  <Tooltip />
+                  <Tooltip content={<ChartTooltip />} />
                   <Legend wrapperStyle={{ fontSize: '11px' }} />
                   <Bar dataKey="contas" name="Contas" fill="#e91e63" radius={[4, 4, 0, 0]} animationBegin={0} animationDuration={800} animationEasing="ease-out" />
                   <Bar dataKey="banqueiros" name="Bankeiros" fill="#0f4a8a" radius={[4, 4, 0, 0]} animationBegin={150} animationDuration={800} animationEasing="ease-out" />

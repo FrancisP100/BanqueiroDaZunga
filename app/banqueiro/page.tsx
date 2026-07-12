@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { marcarNotificacaoLida } from "@/app/banqueiro/actions";
 import { ChangePasswordModal } from "@/components/change-password-modal";
+import { ChartTooltip } from "@/components/chart-tooltip";
 import {
   BarChart,
   Bar,
@@ -525,7 +526,7 @@ export default function BanqueiroDashboard() {
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <RechartsTooltip />
+                  <RechartsTooltip content={<ChartTooltip />} />
                   <Legend verticalAlign="bottom" height={36} />
                 </PieChart>
               </ResponsiveContainer>
@@ -642,7 +643,7 @@ export default function BanqueiroDashboard() {
                           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
                           <XAxis dataKey="nome" tick={{ fontSize: 10, fill: "#6b7280" }} axisLine={false} tickLine={false} />
                           <YAxis tick={{ fontSize: 10, fill: "#6b7280" }} axisLine={false} tickLine={false} allowDecimals={false} />
-                          <RechartsTooltip />
+                          <RechartsTooltip content={<ChartTooltip />} />
                           <Bar dataKey="valor" fill="#e91e63" radius={[4, 4, 0, 0]} animationBegin={0} animationDuration={800} animationEasing="ease-out" />
                         </BarChart>
                       </ResponsiveContainer>

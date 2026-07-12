@@ -29,6 +29,7 @@ import Link from "next/link";
 import { createBrowserClient } from "@/lib/supabase/client";
 import type { Market } from "@/lib/types";
 import { PresenceBadge, PunctualityBadge } from "@/components/ui/status-badge";
+import { ChartTooltip } from "@/components/chart-tooltip";
 
 const CORES_CLASSES: Record<string, string> = {
   Mãezinha: "#e91e63",
@@ -470,13 +471,7 @@ export function MarketDashboard({ market }: { market: Market }) {
                   allowDecimals={false}
                   width={30}
                 />
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: "8px",
-                    border: "none",
-                    boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
-                  }}
-                />
+                <Tooltip content={<ChartTooltip />} />
                 <Line
                   type="monotone"
                   dataKey="contas"
@@ -533,7 +528,7 @@ export function MarketDashboard({ market }: { market: Market }) {
                         ),
                       )}
                     </Pie>
-                    <Tooltip />
+                    <Tooltip content={<ChartTooltip />} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
