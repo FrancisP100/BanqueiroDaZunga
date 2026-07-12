@@ -456,11 +456,11 @@ export function AdminCharts() {
       )}
 
       {/* Gráfico de Contas por Período */}
-      <div className="rounded-2xl border border-bci-line bg-white p-6 shadow-card">
+      <div className="rounded-2xl border border-bci-line bg-white p-4 sm:p-6 shadow-card">
         <h3 className="text-sm font-bold text-bci-ink mb-4">
           Abertura de Contas ({periodLabel[period]})
         </h3>
-        <div className="h-64 w-full">
+        <div className="h-48 sm:h-56 md:h-64 w-full">
           {contasPeriodo.length === 0 || contasPeriodo.every((d) => d.contas === 0) ? (
             <div className="flex h-full items-center justify-center text-sm text-bci-muted">
               Sem dados de contas para o período.
@@ -481,7 +481,7 @@ export function AdminCharts() {
 
       {/* Dois gráficos lado a lado: Pacotes e Províncias */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="rounded-2xl border border-bci-line bg-white p-6 shadow-card">
+        <div className="rounded-2xl border border-bci-line bg-white p-4 sm:p-6 shadow-card">
           <h3 className="text-sm font-bold text-bci-ink mb-4">
             Classes Zungueira Vendidas
           </h3>
@@ -490,14 +490,14 @@ export function AdminCharts() {
               Sem dados de classes.
             </div>
           ) : (
-            <div className="h-48 w-full">
+            <div className="h-36 sm:h-40 md:h-48 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={pacotesData}
                     cx="50%" cy="50%"
-                    innerRadius={50}
-                    outerRadius={75}
+                    innerRadius={35}
+                    outerRadius={60}
                     paddingAngle={3}
                     dataKey="valor"
                     nameKey="nome"
@@ -515,7 +515,7 @@ export function AdminCharts() {
           )}
         </div>
 
-        <div className="rounded-2xl border border-bci-line bg-white p-6 shadow-card">
+        <div className="rounded-2xl border border-bci-line bg-white p-4 sm:p-6 shadow-card">
           <h3 className="text-sm font-bold text-bci-ink mb-4">
             Contas por Província
           </h3>
@@ -524,12 +524,12 @@ export function AdminCharts() {
               Sem dados de províncias.
             </div>
           ) : (
-            <div className="h-48 w-full">
+            <div className="h-36 sm:h-40 md:h-48 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={porProvincia} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
                   <XAxis dataKey="provincia" tick={{ fontSize: 10, fill: '#6b7280' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                  <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} axisLine={false} tickLine={false} allowDecimals={false} width={30} />
                   <Tooltip />
                   <Legend wrapperStyle={{ fontSize: '11px' }} />
                   <Bar dataKey="contas" name="Contas" fill="#e91e63" radius={[4, 4, 0, 0]} />

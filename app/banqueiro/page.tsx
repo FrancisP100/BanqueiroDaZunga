@@ -504,9 +504,9 @@ export default function BanqueiroDashboard() {
             TPA&apos;s pendentes e entregues
           </CardTitle>
         </CardHeader>
-        <CardContent className="h-64">
+        <CardContent className="h-48 sm:h-56 md:h-64">
           {stats.totalPacotes > 0 ? (
-            <div className="h-full min-h-[260px] w-full">
+            <div className="h-full w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -625,7 +625,7 @@ export default function BanqueiroDashboard() {
                   {reportData.contasTotal === 0 ? (
                     <p className="text-sm text-gray-400 py-4 text-center">Sem dados para este período.</p>
                   ) : (
-                    <div className="h-48 w-full">
+                    <div className="h-36 sm:h-40 md:h-48 w-full">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart
                           data={[
