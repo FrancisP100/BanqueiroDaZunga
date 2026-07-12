@@ -91,7 +91,7 @@ export default function InspecionarBanqueiro() {
   if (loading) {
     return (
       <div className="py-20 text-center text-bci-muted">
-        A carregar dados do banqueiro...
+        A carregar dados do Bankeiro...
       </div>
     );
   }

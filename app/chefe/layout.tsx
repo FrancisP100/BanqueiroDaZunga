@@ -41,7 +41,7 @@ export default function ChefeLayout({ children }: { children: React.ReactNode })
       <aside className="hidden md:flex flex-col w-64 bg-bci-dark text-white fixed h-full z-10">
         <div className="p-6 border-b border-white/10">
           <div className="flex items-center gap-3 mb-1">
-            <div className="h-10 w-10 rounded-xl bg-white/10 p-1.5 flex-shrink-0">
+            <div className="h-12 w-12 rounded-xl bg-white/10 p-1.5 flex-shrink-0">
               <BciLogo className="h-full w-full" />
             </div>
             <div>
@@ -88,7 +88,7 @@ export default function ChefeLayout({ children }: { children: React.ReactNode })
 
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 w-full bg-bci-dark text-white z-20 flex items-center justify-between p-4 shadow-md">
-        <div className="relative w-24 h-8">
+        <div className="relative w-28 h-10">
           <Image src="/Logo1.png" alt="BCI Logo" fill className="object-contain object-left" />
         </div>
         <button onClick={() => setIsSidebarOpen(!isSidebarOpen)}>

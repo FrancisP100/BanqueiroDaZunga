@@ -70,6 +70,10 @@ const config: Config = {
         soft: "0 8px 32px rgba(12, 24, 48, 0.10)",
         card: "0 2px 14px rgba(12, 24, 48, 0.06)",
         pink: "0 10px 28px rgba(233, 30, 99, 0.24)"
+      },
+      animation: {
+        'spin-slow': 'spin 8s linear infinite',
+        'spin-slower': 'spin 12s linear infinite',
       }
     }
   },
