@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createBrowserClient } from '@/lib/supabase/client';
 import { Search, Users } from "lucide-react";
-import { PresenceBadge } from "@/components/ui/status-badge";
-import type { PresenceStatus } from "@/lib/types";
 import { getAllowedMarketIds } from "@/lib/leader-scope";
 
 type BanqueiroRow = {
@@ -17,19 +15,9 @@ type BanqueiroRow = {
   ativo: boolean;
 };
 
-type PresencaHoje = {
-  profileId: string;
-  status: PresenceStatus;
-};
-
-function today() {
-  return new Date().toISOString().split("T")[0];
-}
-
 export default function BanqueirosPage() {
   const [loading, setLoading] = useState(true);
   const [banqueiros, setBanqueiros] = useState<BanqueiroRow[]>([]);
-  const [presencasHoje, setPresencasHoje] = useState<PresencaHoje[]>([]);
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -44,17 +32,13 @@ export default function BanqueirosPage() {
       setError(null);
 
       try {
-        const [bResult, mResult, pResult] = await Promise.all([
+        const [bResult, mResult] = await Promise.all([
           supabase
             .from("profiles")
             .select("id, nome, codigo_interno, telefone, local_id, ativo")
             .eq("papel", "banqueiro")
             .order("nome"),
           supabase.from("markets").select("id, nome"),
-          supabase
-            .from("presences")
-            .select("profile_id, status")
-            .eq("data", today()),
         ]);
 
         if (bResult.error) throw bResult.error;
@@ -89,19 +73,9 @@ export default function BanqueirosPage() {
           );
 
         setBanqueiros(filteredBanqueiros);
-
-        const allowedProfileIds = new Set(filteredBanqueiros.map(b => b.id));
-        setPresencasHoje(
-          (pResult.data ?? [])
-            .filter((p: { profile_id: string }) => canSeeAll || allowedProfileIds.has(p.profile_id))
-            .map((p: { profile_id: string; status: PresenceStatus }) => ({
-              profileId: p.profile_id,
-              status: p.status,
-            })),
-        );
       } catch (err: unknown) {
         console.error(err);
-        setError(err instanceof Error ? err.message : "Erro ao carregar banqueiros");
+        setError(err instanceof Error ? err.message : "Erro ao carregar Bankeiros");
       } finally {
         setLoading(false);
       }
@@ -122,7 +96,7 @@ export default function BanqueirosPage() {
 
   if (loading) {
     return (
-      <div className="py-20 text-center text-bci-muted">A carregar banqueiros...</div>
+      <div className="py-20 text-center text-bci-muted">A carregar Bankeiros...</div>
     );
   }
 
@@ -144,8 +118,8 @@ export default function BanqueirosPage() {
           Bankeiros
         </h1>
         <p className="mt-2 text-sm text-bci-muted">
-          Lista de banqueiros sob a sua supervisão. Clique em inspecionar para ver
-          presenças e clientes.
+          Lista de Bankeiros sob a sua supervisão. Clique em inspeccionar para ver
+          o desempenho e clientes.
         </p>
       </div>
 
@@ -156,7 +130,7 @@ export default function BanqueirosPage() {
             <div>
               <h2 className="font-extrabold text-bci-ink">Bankeiros registados</h2>
               <p className="text-xs text-bci-muted mt-0.5">
-                {banqueiros.length} banqueiro{banqueiros.length !== 1 ? "s" : ""}
+                {banqueiros.length} Bankeiro{banqueiros.length !== 1 ? "s" : ""}
               </p>
             </div>
           </div>
@@ -174,27 +148,23 @@ export default function BanqueirosPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-bci-muted">
-              <tr>
-                <th className="px-4 py-3">Nome</th>
-                <th className="px-4 py-3">Código</th>
-                <th className="px-4 py-3">Mercado</th>
-                <th className="px-4 py-3">Presença hoje</th>
-                <th className="px-4 py-3">Estado</th>
-                <th className="px-4 py-3"></th>
+              <tr>                    <th className="px-4 py-3">Nome</th>
+                    <th className="px-4 py-3">Código</th>
+                    <th className="px-4 py-3">Mercado</th>
+                    <th className="px-4 py-3">Estado</th>
+                    <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-12 text-center text-bci-muted">
+                <tr>                    <td colSpan={5} className="py-12 text-center text-bci-muted">
                     {search
-                      ? "Nenhum banqueiro encontrado para esta pesquisa."
-                      : "Nenhum banqueiro registado."}
+                      ? "Nenhum Bankeiro encontrado para esta pesquisa."
+                      : "Nenhum Bankeiro registado."}
                   </td>
                 </tr>
               ) : (
                 filtered.map((b) => {
-                  const pres = presencasHoje.find((p) => p.profileId === b.id);
                   return (
                     <tr
                       key={b.id}
@@ -203,13 +173,6 @@ export default function BanqueirosPage() {
                       <td className="px-4 py-3 font-bold">{b.nome}</td>
                       <td className="px-4 py-3 text-bci-muted">{b.codigoInterno}</td>
                       <td className="px-4 py-3 text-bci-muted">{b.mercadoNome}</td>
-                      <td className="px-4 py-3">
-                        {pres ? (
-                          <PresenceBadge value={pres.status} />
-                        ) : (
-                          <span className="text-bci-muted text-xs">Sem registo</span>
-                        )}
-                      </td>
                       <td className="px-4 py-3">
                         <span
                           className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold ${

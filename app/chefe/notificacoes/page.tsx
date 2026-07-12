@@ -150,7 +150,7 @@ export default function NotificacoesPage() {
           Alertas de TPA Pendente
         </h1>
         <p className="mt-2 text-sm text-bci-muted">
-          Selecione os clientes com TPA pendente e notifique os banqueiros responsáveis.
+          Selecione os clientes com TPA pendente e notifique os Bankeiros responsáveis.
         </p>
       </div>
 
@@ -212,7 +212,7 @@ export default function NotificacoesPage() {
         <textarea
           value={mensagem}
           onChange={(e) => setMensagem(e.target.value)}
-          placeholder="Mensagem opcional para os banqueiros (deixe em branco para usar a mensagem padrão)..."
+          placeholder="Mensagem opcional para os Bankeiros (deixe em branco para usar a mensagem padrão)..."
           rows={2}
           className="w-full rounded-xl border border-bci-line px-4 py-3 text-sm font-medium outline-none focus:border-bci-blue focus:ring-4 focus:ring-blue-100 resize-none"
         />

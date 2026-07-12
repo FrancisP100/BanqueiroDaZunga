@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { createBrowserClient } from '@/lib/supabase/client';
@@ -18,10 +18,10 @@ export default function AdminInspecionarBanqueiro() {
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const supabase = createBrowserClient(
+  const supabase = useMemo(() => createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
+  ), []);
 
   useEffect(() => {
     let ignore = false;
@@ -82,7 +82,7 @@ export default function AdminInspecionarBanqueiro() {
   if (loading) {
     return (
       <div className="py-20 text-center text-bci-muted">
-        A carregar dados do banqueiro...
+        A carregar dados do Bankeiro...
       </div>
     );
   }

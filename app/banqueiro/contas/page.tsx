@@ -10,7 +10,7 @@ export default async function ContasPage() {
   return (
     <AppShell
       title="Contas abertas"
-      eyebrow="Relatorio do Banqueiro"
+      eyebrow="Relatorio do Bankeiro"
       userName={user.nome}
       userMeta={user.codigoInterno}
       navItems={[

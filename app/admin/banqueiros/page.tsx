@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ProfileForm } from "@/components/profile-form";
 import { DeleteProfileButton } from "@/components/delete-profile-button";
 import { ToggleProfileStatus } from "@/components/toggle-profile-status";
+import { FormDialog } from "@/components/form-dialog";
 import { getMvpData } from "@/lib/data";
 import { registerProfile } from "@/app/admin/actions";
 
@@ -15,31 +16,31 @@ export default async function AdminBanqueirosPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-bci-navy/60">
-          Gestão
-        </p>
-        <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-bci-ink">
-          Bankeiros
-        </h1>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-bci-navy/60">
+            Gestão
+          </p>
+          <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-bci-ink">
+            Bankeiros
+          </h1>
+        </div>
+        <FormDialog
+          triggerLabel="Cadastrar Bankeiro"
+          title="Cadastrar novo Bankeiro"
+        >
+          <ProfileForm
+            role="banqueiro"
+            title="Dados do Bankeiro"
+            description="Use este formulário para registar um novo Bankeiro e associar um mercado local, se aplicável."
+            showMarket
+            markets={markets}
+            action={registerProfile}
+          />
+        </FormDialog>
       </div>
 
-      {/* Formulário por cima */}
-      <div>
-        <h2 className="mb-3 text-xl font-extrabold text-bci-ink">
-          Cadastrar um novo banqueiro
-        </h2>
-        <ProfileForm
-          role="banqueiro"
-          title="Dados do banqueiro"
-          description="Use este formulário para registar um novo banqueiro e associar um mercado local, se aplicável."
-          showMarket
-          markets={markets}
-          action={registerProfile}
-        />
-      </div>
-
-      {/* Listagem por baixo */}
+      {/* Listagem */}
       <div className="rounded-2xl border border-bci-line bg-white p-5 shadow-card">
           <div className="flex items-center gap-3 mb-5">
             <div className="grid h-10 w-10 place-items-center rounded-xl bg-bci-navySoft text-bci-navy">
@@ -57,7 +58,7 @@ export default async function AdminBanqueirosPage() {
 
           {banqueiros.length === 0 ? (
             <p className="py-8 text-center text-sm text-bci-muted">
-              Nenhum banqueiro registado ainda.
+              Nenhum Bankeiro registado ainda.
             </p>
           ) : (
             <div className="overflow-x-auto rounded-2xl border border-bci-line">
@@ -119,7 +120,7 @@ export default async function AdminBanqueirosPage() {
                           <DeleteProfileButton
                             profileId={profile.id}
                             profileName={profile.nome}
-                            roleLabel="o banqueiro"
+                            roleLabel="o Bankeiro"
                           />
                         </div>
                       </td>

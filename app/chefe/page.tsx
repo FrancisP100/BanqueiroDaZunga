@@ -85,7 +85,7 @@ export default function LiderDashboard() {
         <div className="px-5 py-4 border-b border-bci-line flex items-center justify-between gap-4">
           <div>
             <h2 className="font-extrabold text-bci-ink">Bankeiros sob gestão</h2>
-            <p className="text-xs text-bci-muted mt-0.5">{banqueiros.length} banqueiros registados</p>
+            <p className="text-xs text-bci-muted mt-0.5">{banqueiros.length} Bankeiros registados</p>
           </div>
           <div className="relative">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-bci-muted" />

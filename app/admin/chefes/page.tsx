@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ProfileForm } from "@/components/profile-form";
 import { DeleteProfileButton } from "@/components/delete-profile-button";
 import { ToggleProfileStatus } from "@/components/toggle-profile-status";
+import { FormDialog } from "@/components/form-dialog";
 import { getMvpData } from "@/lib/data";
 import { registerProfile } from "@/app/admin/actions";
 
@@ -12,31 +13,31 @@ export default async function AdminChefesPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-bci-navy/60">
-          Gestão
-        </p>
-        <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-bci-ink">
-          Líderes
-        </h1>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-bci-navy/60">
+            Gestão
+          </p>
+          <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-bci-ink">
+            Líderes
+          </h1>
+        </div>
+        <FormDialog
+          triggerLabel="Cadastrar líder"
+          title="Cadastrar novo líder"
+        >
+          <ProfileForm
+            role="chefe"
+            title="Dados do líder"
+            description="O líder precisa obrigatoriamente de estar associado a um balcão (Mercado local ou Nº do Balcão) para poder acompanhar os Bankeiros."
+            showMarket
+            markets={markets}
+            action={registerProfile}
+          />
+        </FormDialog>
       </div>
 
-      {/* Formulário por cima */}
-      <div>
-        <h2 className="mb-3 text-xl font-extrabold text-bci-ink">
-          Cadastrar um novo líder
-        </h2>
-        <ProfileForm
-          role="chefe"
-          title="Dados do líder"
-          description="O líder precisa obrigatoriamente de estar associado a um balcão (Mercado local ou Nº do Balcão) para poder acompanhar os banqueiros."
-          showMarket
-          markets={markets}
-          action={registerProfile}
-        />
-      </div>
-
-      {/* Listagem por baixo */}
+      {/* Listagem */}
       <div className="rounded-2xl border border-bci-line bg-white p-5 shadow-card">
           <div className="flex items-center gap-3 mb-5">
             <div className="grid h-10 w-10 place-items-center rounded-xl bg-bci-navySoft text-bci-navy">

@@ -16,14 +16,14 @@ export default async function BanqueiroRegisterPage() {
             Junte-se ao programa
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-6 text-bci-muted">
-            Preencha os dados abaixo para registar o seu perfil de banqueiro e
+            Preencha os dados abaixo para registar o seu perfil de Bankeiro e
             começar a abrir contas e marcar presencas.
           </p>
         </section>
 
         <ProfileForm
           role="banqueiro"
-          title="Dados do banqueiro"
+          title="Dados do Bankeiro"
           description="Registe o seu perfil e associe um mercado local, se aplicavel."
           showMarket
           markets={markets}

@@ -143,7 +143,7 @@ export default function RelatoriosPage() {
       <div className="rounded-2xl border border-bci-line bg-white shadow-card overflow-hidden">
         <div className="px-5 py-4 border-b border-bci-line flex items-center gap-2">
           <Building2 size={16} className="text-bci-blue" />
-          <h2 className="font-extrabold text-bci-ink">Desempenho por banqueiro — {period}</h2>
+          <h2 className="font-extrabold text-bci-ink">Desempenho por Bankeiro — {period}</h2>
         </div>
         {loading ? (
           <p className="py-10 text-center text-sm text-bci-muted">A carregar…</p>

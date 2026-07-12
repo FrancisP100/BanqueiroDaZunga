@@ -1,6 +1,7 @@
 import { Store } from 'lucide-react';
 import { getMvpData } from '@/lib/data';
 import { MarketForm } from '@/components/market-form';
+import { FormDialog } from '@/components/form-dialog';
 
 export default async function AdminMercadosPage() {
   const { markets } = await getMvpData();
@@ -8,24 +9,24 @@ export default async function AdminMercadosPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div>
-        <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-bci-navy/60">
-          Gestão
-        </p>
-        <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-bci-ink">
-          Mercados
-        </h1>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-bci-navy/60">
+            Gestão
+          </p>
+          <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-bci-ink">
+            Mercados
+          </h1>
+        </div>
+        <FormDialog
+          triggerLabel="Registar mercado"
+          title="Registar novo mercado"
+        >
+          <MarketForm />
+        </FormDialog>
       </div>
 
-      {/* Formulário por cima */}
-      <div>
-        <h2 className="mb-3 text-xl font-extrabold text-bci-ink">
-          Registar novo mercado
-        </h2>
-        <MarketForm />
-      </div>
-
-      {/* Listagem por baixo */}
+      {/* Listagem */}
       <div className="rounded-2xl border border-bci-line bg-white p-5 shadow-card">
           <div className="flex items-center gap-3 mb-5">
             <div className="grid h-10 w-10 place-items-center rounded-xl bg-bci-navySoft text-bci-navy">

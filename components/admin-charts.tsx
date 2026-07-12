@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { createBrowserClient } from '@/lib/supabase/client';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -59,10 +59,10 @@ export function AdminCharts() {
   const [porLider, setPorLider] = useState<any[]>([]);
   const [pacotesData, setPacotesData] = useState<any[]>([]);
 
-  const supabase = createBrowserClient(
+  const supabase = useMemo(() => createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
+  ), []);
 
   // Carregar dados principais uma vez (estáticas que não dependem de filtros)
   useEffect(() => {
@@ -604,7 +604,7 @@ export function AdminCharts() {
           </div>
           <div>
             <p className="font-extrabold text-bci-ink">Mapa de Presenças</p>
-            <p className="text-xs text-bci-muted">Monitoramento de presenças e faltas dos banqueiros</p>
+            <p className="text-xs text-bci-muted">Monitoramento de presenças e faltas dos Bankeiros</p>
           </div>
         </div>
 
@@ -699,7 +699,7 @@ export function AdminCharts() {
           <div className="rounded-xl border border-bci-line overflow-hidden">
             <div className="px-4 py-3 border-b border-bci-line">
               <h4 className="font-bold text-sm text-bci-ink">Bankeiros sem presença ({noRecordList.length})</h4>
-              <p className="text-xs text-bci-muted mt-0.5">Banqueiros sem registo de presença para esta data.</p>
+              <p className="text-xs text-bci-muted mt-0.5">Bankeiros sem registo de presença para esta data.</p>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">

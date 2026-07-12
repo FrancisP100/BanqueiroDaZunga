@@ -16,7 +16,7 @@ export default async function ChefeRegisterPage() {
             Registar novo líder de balcão
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-6 text-bci-muted">
-            Crie um perfil de líder para acompanhar os banqueiros. O líder precisa
+            Crie um perfil de líder para acompanhar os Bankeiros. O líder precisa
             obrigatoriamente de estar associado a um balcão ou mercado.
           </p>
         </section>
