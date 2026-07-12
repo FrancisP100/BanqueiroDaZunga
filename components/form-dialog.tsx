@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, Children, cloneElement, isValidElement } from "react";
 import {
   Dialog,
   DialogContent,
@@ -16,6 +16,17 @@ type FormDialogProps = {
 
 export function FormDialog({ triggerLabel, title, children }: FormDialogProps) {
   const [open, setOpen] = useState(false);
+
+  const handleSuccess = useCallback(() => {
+    setOpen(false);
+  }, []);
+
+  const childrenWithProps = Children.map(children, (child) => {
+    if (isValidElement(child)) {
+      return cloneElement(child, { onSuccess: handleSuccess } as any);
+    }
+    return child;
+  });
 
   return (
     <>
@@ -33,7 +44,7 @@ export function FormDialog({ triggerLabel, title, children }: FormDialogProps) {
             {title}
           </DialogTitle>
           <div className="mt-2">
-            {children}
+            {childrenWithProps}
           </div>
         </DialogContent>
       </Dialog>

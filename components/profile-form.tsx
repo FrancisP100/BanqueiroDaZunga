@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { registerProfile as defaultRegisterProfile } from "@/app/banqueiro/register/actions";
 import type { Market, UserRole } from "@/lib/types";
 
@@ -16,6 +16,7 @@ type ProfileFormProps = {
   showMarket?: boolean;
   markets?: Market[];
   action?: RegisterAction;
+  onSuccess?: () => void;
 };
 
 export function ProfileForm({
@@ -25,10 +26,20 @@ export function ProfileForm({
   showMarket,
   markets = [],
   action,
+  onSuccess,
 }: ProfileFormProps) {
   const isLider = role === "chefe";
   const registerAction = action ?? defaultRegisterProfile;
   const [state, formAction, pending] = useActionState(registerAction, null);
+
+  // Auto-fechar modal após submissão bem-sucedida
+  const prevPending = useRef(pending);
+  useEffect(() => {
+    if (prevPending.current && !pending && !state?.error) {
+      onSuccess?.();
+    }
+    prevPending.current = pending;
+  }, [pending, state, onSuccess]);
 
   return (
     <form
