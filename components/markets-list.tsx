@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Store, Search } from "lucide-react";
+import Link from "next/link";
+import { Store, Search, BarChart3 } from "lucide-react";
 import type { Market } from "@/lib/types";
 
 export function MarketsList({ markets }: { markets: Market[] }) {
@@ -104,6 +105,7 @@ export function MarketsList({ markets }: { markets: Market[] }) {
                 <th className="px-3 sm:px-4 py-3 whitespace-nowrap">Província</th>
                 <th className="px-3 sm:px-4 py-3 whitespace-nowrap">Tipo</th>
                 <th className="px-3 sm:px-4 py-3 whitespace-nowrap">Balcão</th>
+                <th className="px-3 sm:px-4 py-3 whitespace-nowrap"></th>
               </tr>
             </thead>
             <tbody>
@@ -125,6 +127,15 @@ export function MarketsList({ markets }: { markets: Market[] }) {
                   </td>
                   <td className="px-3 sm:px-4 py-3 text-bci-muted whitespace-nowrap">
                     {market.balcao ?? "—"}
+                  </td>
+                  <td className="px-3 sm:px-4 py-3 whitespace-nowrap text-right">
+                    <Link
+                      href={`/admin/mercados/${market.id}`}
+                      className="inline-flex items-center gap-1 rounded-lg bg-bci-navySoft px-2.5 py-1.5 text-xs font-bold text-bci-navy hover:bg-bci-navy hover:text-white transition-colors"
+                    >
+                      <BarChart3 size={12} />
+                      <span className="hidden sm:inline">Dashboard</span>
+                    </Link>
                   </td>
                 </tr>
               ))}
