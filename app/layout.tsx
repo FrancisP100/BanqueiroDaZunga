@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
+import { Toaster } from "sonner";
 import { PresenceAutomation } from "@/components/PresenceAutomation";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
@@ -17,6 +18,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen font-sans antialiased">
         <PresenceAutomation />
         {children}
+        <Toaster
+          position="top-right"
+          richColors
+          closeButton
+          toastOptions={{ duration: 3000 }}
+        />
       </body>
     </html>
   );

@@ -7,6 +7,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
+import { toast } from "sonner";
 
 type FormDialogProps = {
   triggerLabel: string;
@@ -18,8 +19,13 @@ export function FormDialog({ triggerLabel, title, children }: FormDialogProps) {
   const [open, setOpen] = useState(false);
 
   const handleSuccess = useCallback(() => {
-    setOpen(false);
-  }, []);
+    toast.success("Registo concluído com sucesso!", {
+      description: `${title} foi registado(a) com êxito.`,
+      duration: 2500,
+    });
+    // Pequeno atraso para o toast aparecer antes do modal fechar
+    setTimeout(() => setOpen(false), 300);
+  }, [title]);
 
   const childrenWithProps = Children.map(children, (child) => {
     if (isValidElement(child)) {
