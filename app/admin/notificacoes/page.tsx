@@ -1,10 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Bell, BellOff, CheckCheck, Inbox, ArrowLeft } from 'lucide-react';
+import { Bell, BellOff, CheckCheck, Inbox, ArrowLeft, AlertTriangle, UserPlus, CheckCircle } from 'lucide-react';
 import NotificationCard from '@/components/notification-card';
-import type { Notification } from '@/lib/types';
+import type { Notification, NotificationType } from '@/lib/types';
 import Link from 'next/link';
+
+const FILTER_OPTIONS: { value: NotificationType | 'todas'; label: string; icon: React.ElementType; color: string; activeColor: string }[] = [
+  { value: 'todas', label: 'Todas', icon: Bell, color: 'text-gray-500', activeColor: 'bg-gray-900 text-white' },
+  { value: 'alerta_tpa', label: 'Alerta TPA', icon: AlertTriangle, color: 'text-amber-600', activeColor: 'bg-amber-600 text-white' },
+  { value: 'abertura_conta', label: 'Abertura Conta', icon: UserPlus, color: 'text-emerald-600', activeColor: 'bg-emerald-600 text-white' },
+  { value: 'tpa_entregue', label: 'TPA Entregue', icon: CheckCircle, color: 'text-blue-600', activeColor: 'bg-blue-600 text-white' },
+];
 import {
   getAllNotifications,
   adminMarcarNotificacaoLida,
@@ -58,7 +65,21 @@ export default function AdminNotificacoesPage() {
     createdAt: n.created_at,
   }));
 
+  const [tipoFiltro, setTipoFiltro] = useState<NotificationType | 'todas'>('todas');
+
   const naoLidas = notificacoes.filter((n) => !n.lida).length;
+
+  // Aplicar filtro por tipo
+  const filteredNotifs = tipoFiltro === 'todas'
+    ? mappedNotifs
+    : mappedNotifs.filter((n) => n.tipo === tipoFiltro);
+
+  const contagemPorTipo = {
+    todas: notificacoes.length,
+    alerta_tpa: notificacoes.filter((n) => n.tipo === 'alerta_tpa').length,
+    abertura_conta: notificacoes.filter((n) => n.tipo === 'abertura_conta').length,
+    tpa_entregue: notificacoes.filter((n) => n.tipo === 'tpa_entregue').length,
+  };
 
   return (
     <div className="space-y-8">
@@ -82,29 +103,57 @@ export default function AdminNotificacoesPage() {
         </p>
       </div>
 
-      {/* Acções */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm text-bci-muted">
+      {/* Filtro por tipo */}
+      <div className="flex flex-wrap items-center gap-2">
+        {FILTER_OPTIONS.map((opt) => {
+          const Icon = opt.icon;
+          const isActive = tipoFiltro === opt.value;
+          const count = contagemPorTipo[opt.value as keyof typeof contagemPorTipo] ?? 0;
+          return (
+            <button
+              key={opt.value}
+              onClick={() => setTipoFiltro(opt.value)}
+              className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-bold transition-all duration-200 ${
+                isActive
+                  ? `${opt.activeColor} shadow-md`
+                  : `${opt.color} bg-white border border-bci-line hover:shadow-sm hover:-translate-y-0.5`
+              }`}
+            >
+              <Icon size={15} />
+              {opt.label}
+              {count > 0 && (
+                <span className={`ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-extrabold ${
+                  isActive
+                    ? 'bg-white/25 text-white'
+                    : 'bg-gray-100 text-gray-600'
+                }`}>
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+
+        <div className="ml-auto flex items-center gap-2 text-sm text-bci-muted">
           <Inbox size={16} />
           <span>
-            {loading ? '…' : `${notificacoes.length} notificaç${notificacoes.length === 1 ? 'ão' : 'ões'} ao total`}
+            {filteredNotifs.length} de {loading ? '…' : notificacoes.length}
           </span>
           {naoLidas > 0 && (
             <span className="rounded-full bg-bci-magenta px-2.5 py-0.5 text-xs font-bold text-white">
               {naoLidas} nova{naoLidas > 1 ? 's' : ''}
             </span>
           )}
+          {naoLidas > 0 && (
+            <button
+              onClick={handleMarkAllAsRead}
+              className="ml-2 inline-flex items-center gap-1 rounded-xl border border-bci-line bg-white px-3 py-1.5 text-xs font-bold text-bci-magenta hover:bg-bci-magenta/5 transition-colors"
+            >
+              <CheckCheck size={13} />
+              Marcar todas
+            </button>
+          )}
         </div>
-
-        {naoLidas > 0 && (
-          <button
-            onClick={handleMarkAllAsRead}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-bci-line bg-white px-4 py-2 text-sm font-bold text-bci-magenta hover:bg-bci-magenta/5 transition-colors"
-          >
-            <CheckCheck size={16} />
-            Marcar todas lidas
-          </button>
-        )}
       </div>
 
       {/* Lista de notificações */}
@@ -124,13 +173,22 @@ export default function AdminNotificacoesPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {mappedNotifs.map((notif) => (
-            <NotificationCard
-              key={notif.id}
-              notification={notif}
-              onMarkAsRead={handleMarkAsRead}
-            />
-          ))}
+          {filteredNotifs.length === 0 ? (
+            <div className="rounded-2xl border border-bci-line bg-white py-12 text-center shadow-card">
+              <BellOff className="mx-auto h-10 w-10 text-bci-muted" />
+              <p className="mt-3 text-sm font-bold text-bci-muted">
+                Nenhuma notificação deste tipo.
+              </p>
+            </div>
+          ) : (
+            filteredNotifs.map((notif) => (
+              <NotificationCard
+                key={notif.id}
+                notification={notif}
+                onMarkAsRead={handleMarkAsRead}
+              />
+            ))
+          )}
         </div>
       )}
     </div>
