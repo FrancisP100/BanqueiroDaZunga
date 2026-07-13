@@ -32,6 +32,7 @@ export async function registerProfile(
   if (password.length < 6) return { error: "A senha deve ter pelo menos 6 caracteres." };
   if (!nome)           return { error: "O nome é obrigatório." };
   if (!codigoInterno)  return { error: "O código interno é obrigatório." };
+  if (!provincia)      return { error: "A província é obrigatória. Selecione uma província no menu." };
 
   // Líder OBRIGATORIAMENTE precisa de um balcão ou mercado
   if (role === "chefe" && !localId && !numeroBalcao) {

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { createBrowserClient } from '@/lib/supabase/client';
 import { ArrowLeft, Save } from "lucide-react";
 import { editProfile } from "@/app/admin/actions";
+import { PROVINCIAS_ANGOLA } from "@/lib/constants";
 
 export default function EditarPerfilPage() {
   const params = useParams();
@@ -14,6 +15,7 @@ export default function EditarPerfilPage() {
 
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<any>(null);
+  const [markets, setMarkets] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const [state, formAction, pending] = useActionState(editProfile, null);
@@ -34,18 +36,21 @@ export default function EditarPerfilPage() {
       return;
     }
 
-    supabase
-      .from("profiles")
-      .select("*, markets(nome, provincia)")
-      .eq("id", id)
-      .single()
-      .then(({ data, error: err }) => {
+    Promise.all([
+      supabase
+        .from("profiles")
+        .select("*, markets(nome, provincia)")
+        .eq("id", id)
+        .single(),
+      supabase.from("markets").select("id, nome, provincia").order("nome"),
+    ]).then(([profileRes, marketsRes]) => {
         if (ignore) return;
-        if (err) {
-          setError("Erro ao carregar perfil: " + err.message);
+        if (profileRes.error) {
+          setError("Erro ao carregar perfil: " + profileRes.error.message);
         } else {
-          setProfile(data);
+          setProfile(profileRes.data);
         }
+        setMarkets(marketsRes.data ?? []);
         setLoading(false);
       });
 
@@ -155,11 +160,18 @@ export default function EditarPerfilPage() {
         </label>
         <label className="text-sm font-bold text-bci-ink">
           Província
-          <input
+          <span className="text-bci-magenta ml-1">*</span>
+          <select
             name="provincia"
             defaultValue={profile.provincia ?? ""}
-            className="mt-2 w-full rounded-xl border border-bci-line px-4 py-3 font-medium outline-none focus:border-bci-navy focus:ring-4 focus:ring-bci-navySoft"
-          />
+            required
+            className="mt-2 w-full rounded-xl border border-bci-line bg-white px-4 py-3 font-medium outline-none focus:border-bci-navy focus:ring-4 focus:ring-bci-navySoft"
+          >
+            <option value="">— Selecione a província —</option>
+            {PROVINCIAS_ANGOLA.map((p) => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
         </label>
         <label className="text-sm font-bold text-bci-ink">
           Número do Balcão
@@ -168,6 +180,24 @@ export default function EditarPerfilPage() {
             defaultValue={profile.numero_balcao ?? ""}
             className="mt-2 w-full rounded-xl border border-bci-line px-4 py-3 font-medium outline-none focus:border-bci-navy focus:ring-4 focus:ring-bci-navySoft"
           />
+        </label>
+        <label className="text-sm font-bold text-bci-ink md:col-span-2">
+          Mercado local
+          <select
+            name="local_id"
+            defaultValue={profile.local_id ?? ""}
+            className="mt-2 w-full rounded-xl border border-bci-line bg-white px-4 py-3 font-medium outline-none focus:border-bci-navy focus:ring-4 focus:ring-bci-navySoft"
+          >
+            <option value="">— Nenhum —</option>
+            {markets.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.nome} — {m.provincia}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-[11px] text-bci-muted">
+            Associar o perfil a um mercado específico
+          </p>
         </label>
 
         <div className="md:col-span-2 flex justify-end gap-3 pt-4">

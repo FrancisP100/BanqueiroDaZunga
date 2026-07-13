@@ -27,45 +27,43 @@ export async function getAllowedMarketIds(
     return { marketIds: new Set(), isUnrestricted: true };
   }
 
-  // É líder — vamos determinar os mercados a que tem acesso
+  // ─── É líder — vamos determinar os mercados a que tem acesso ───
+  const marketIds = new Set<string>();
 
-  // 1. Buscar banqueiros vinculados por leader_id
+  // Método 1: Balcão do líder (sempre incluído se local_id existir)
+  if (profile.local_id) {
+    marketIds.add(profile.local_id);
+
+    // Expandir para todos os mercados do mesmo balcão
+    const { data: leaderMarket } = await supabase
+      .from("markets")
+      .select("balcao")
+      .eq("id", profile.local_id)
+      .single();
+
+    if (leaderMarket?.balcao) {
+      const { data: sameBalcao } = await supabase
+        .from("markets")
+        .select("id")
+        .eq("balcao", leaderMarket.balcao);
+      (sameBalcao ?? []).forEach((m: { id: string }) => marketIds.add(m.id));
+    }
+  }
+
+  // Método 2: Mercados dos banqueiros vinculados (quando RLS permite)
   const { data: banqueirosVinculados } = await supabase
     .from("profiles")
     .select("local_id")
     .eq("leader_id", user.id)
     .eq("papel", "banqueiro");
 
-  if (banqueirosVinculados && banqueirosVinculados.length > 0) {
-    const marketIds = new Set<string>();
+  if (banqueirosVinculados) {
     banqueirosVinculados.forEach((b: any) => {
       if (b.local_id) marketIds.add(b.local_id);
     });
-    if (marketIds.size > 0) return { marketIds, isUnrestricted: false };
   }
 
-  // 2. Fallback: leader_id não encontrou nada, usar local_id do líder
-  if (!profile.local_id) {
-    // Líder sem local_id nem banqueiros vinculados — não vê nada
-    return { marketIds: new Set(), isUnrestricted: false };
-  }
-
-  const { data: leaderMarket } = await supabase
-    .from("markets")
-    .select("balcao")
-    .eq("id", profile.local_id)
-    .single();
-  if (!leaderMarket?.balcao) return { marketIds: new Set([profile.local_id]), isUnrestricted: false };
-
-  const { data: sameBalcao } = await supabase
-    .from("markets")
-    .select("id")
-    .eq("balcao", leaderMarket.balcao);
-
-  return {
-    marketIds: new Set((sameBalcao ?? []).map((m: { id: string }) => m.id)),
-    isUnrestricted: false,
-  };
+  return { marketIds, isUnrestricted: false };
 }
 
 /**
@@ -93,10 +91,7 @@ export async function verifyBanqueiroAccess(
   // Se não é líder (admin), permitir sempre
   if (profile.papel !== "chefe") return true;
 
-  // Líder sem local_id não tem acesso a ninguém
-  if (!profile.local_id) return false;
-
-  // 1. Verificar leader_id explícito
+  // 1. Verificar leader_id explícito (funciona SEMPRE, independente de local_id)
   const { data: banqueiro } = await supabase
     .from("profiles")
     .select("leader_id, local_id")
@@ -108,7 +103,8 @@ export async function verifyBanqueiroAccess(
   // Se o banqueiro tem leader_id e corresponde ao líder actual
   if (banqueiro.leader_id === user.id) return true;
 
-  // 2. Fallback: verificar por balcão
+  // 2. Fallback: verificar por balcão (requer local_id)
+  if (!profile.local_id) return false;
   if (!banqueiro.local_id) return false;
 
   const { data: leaderMarket } = await supabase
