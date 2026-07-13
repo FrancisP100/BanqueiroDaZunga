@@ -270,7 +270,31 @@ export async function deleteProfile(profileId: string): Promise<{ error?: string
   const adminClient = await getAdminClient();
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  // Apagar perfil da tabela profiles
+  // 1. Desvincular banqueiros que apontam para este líder
+  await adminClient
+    .from("profiles")
+    .update({ leader_id: null })
+    .eq("leader_id", profileId);
+
+  // 2. Apagar notificações onde o perfil é leader ou destinatário
+  await adminClient
+    .from("notifications")
+    .delete()
+    .or(`leader_id.eq.${profileId},banqueiro_id.eq.${profileId}`);
+
+  // 3. Apagar contas associadas ao perfil
+  await adminClient
+    .from("accounts")
+    .delete()
+    .eq("banqueiro_id", profileId);
+
+  // 4. Apagar presenças associadas ao perfil
+  await adminClient
+    .from("presences")
+    .delete()
+    .eq("profile_id", profileId);
+
+  // 5. Apagar perfil da tabela profiles
   const { error: profileError } = await adminClient
     .from("profiles")
     .delete()
@@ -278,7 +302,7 @@ export async function deleteProfile(profileId: string): Promise<{ error?: string
 
   if (profileError) return { error: "Erro ao eliminar perfil: " + profileError.message };
 
-  // Se tiver service role, apagar também o auth user
+  // 6. Se tiver service role, apagar também o auth user
   if (serviceKey) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const adminAuth = createSupabaseClient(supabaseUrl, serviceKey, {
