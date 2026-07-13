@@ -480,10 +480,12 @@ async function syncBanqueirosToLider(
     .select("id, nome")
     .eq("papel", "banqueiro");
 
-  if (numeroBalcao) {
-    query = query.eq("numero_balcao", numeroBalcao);
-  } else if (localId) {
+  if (localId) {
+    // local_id (UUID da tabela markets) é o identificador MAIS CONFIÁVEL
     query = query.eq("local_id", localId);
+  } else if (numeroBalcao) {
+    // numero_balcao é texto livre — usar apenas como fallback
+    query = query.eq("numero_balcao", numeroBalcao);
   } else {
     return;
   }
@@ -519,7 +521,7 @@ async function syncBanqueirosToLider(
  * Quando um banqueiro é registado, verifica se já existe um líder
  * para o seu balcão e, se sim, vincula automaticamente.
  */
-async function syncLiderToBanqueiro(
+export async function syncLiderToBanqueiro(
   adminClient: any,
   banqueiroId: string,
   numeroBalcao: string | null,
@@ -530,10 +532,12 @@ async function syncLiderToBanqueiro(
     .select("id, nome")
     .eq("papel", "chefe");
 
-  if (numeroBalcao) {
-    query = query.eq("numero_balcao", numeroBalcao);
-  } else if (localId) {
+  if (localId) {
+    // local_id (UUID da tabela markets) é o identificador MAIS CONFIÁVEL
     query = query.eq("local_id", localId);
+  } else if (numeroBalcao) {
+    // numero_balcao é texto livre — usar apenas como fallback
+    query = query.eq("numero_balcao", numeroBalcao);
   } else {
     return;
   }

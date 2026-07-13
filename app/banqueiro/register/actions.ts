@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
+import { syncLiderToBanqueiro } from "@/app/admin/actions";
 
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -120,6 +121,8 @@ export async function registerProfile(
   }
 
   // Inserir perfil — admin client bypassa RLS
+  const isBanqueiro = role === "banqueiro";
+
   const { error: profileError } = await adminClient.from("profiles").insert({
     id: userId,
     email,
@@ -146,6 +149,11 @@ export async function registerProfile(
       return { error: `O código interno "${codigoInterno}" já está em uso.` };
     }
     return { error: "Erro ao guardar o perfil: " + profileError.message };
+  }
+
+  // ── Se for banqueiro, vincular automaticamente ao líder do seu balcão ──
+  if (isBanqueiro && (numeroBalcao || localId)) {
+    await syncLiderToBanqueiro(adminClient, userId, numeroBalcao, localId);
   }
 
   redirect("/login");
