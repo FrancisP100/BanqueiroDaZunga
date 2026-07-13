@@ -81,7 +81,7 @@ export async function createAccount(formData: FormData) {
 
   // 2. Criar conta — entra sempre como "pendente"
   const agora = new Date();
-  await supabase.from("accounts").insert({
+  const { data: newAccount } = await supabase.from("accounts").insert({
     banqueiro_id: profile.id,
     cliente_id: clienteId,
     pacote,
@@ -89,7 +89,26 @@ export async function createAccount(formData: FormData) {
     status: "pendente",
     tpa_status: "pendente",
     hora_abertura: agora.toTimeString().slice(0, 8),
-  });
+  }).select("id").single();
+
+  // 3. Criar notificação de abertura de conta para o banqueiro
+  if (newAccount) {
+    const adminClient = await getAdminClient();
+    await adminClient.from("notifications").insert({
+      leader_id: profile.id,
+      banqueiro_id: profile.id,
+      cliente_nome: nome,
+      cliente_id: clienteId,
+      conta_id: newAccount.id,
+      tipo: "abertura_conta",
+      leader_nome: "Sistema",
+      mensagem: `Conta aberta para ${nome} — classe ${pacote}.`,
+      descricao: `Registo de nova conta para a cliente ${nome}. Classe: ${pacote}. O TPA está pendente — entregue o terminal e actualize o estado no sistema.`,
+      lida: false,
+    }).then(({ error: notifErr }) => {
+      if (notifErr) console.error("Erro ao criar notificação de abertura:", notifErr);
+    });
+  }
 
   revalidatePath("/banqueiro");
   revalidatePath("/banqueiro/clientes");
@@ -220,18 +239,70 @@ export async function eliminarConta(accountId: string) {
   return {};
 }
 
-/** Banqueiro actualiza o estado do TPA */
+/** Banqueiro actualiza o estado do TPA e notifica o líder */
 export async function atualizarTpaStatus(
   accountId: string,
   status: "pendente" | "entregue",
 ) {
   if (!hasSupabaseEnv()) return { error: "Supabase não configurado" };
+
   const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return { error: "Não autenticado" };
+
+  // 1. Actualizar o estado do TPA
   const { error } = await supabase
     .from("accounts")
     .update({ tpa_status: status })
     .eq("id", accountId);
   if (error) return { error: error.message };
+
+  // 2. Se marcou como entregue, notificar o líder
+  if (status === "entregue") {
+    try {
+      const adminClient = await getAdminClient();
+
+      // Buscar conta com dados do cliente
+      const { data: account } = await adminClient
+        .from("accounts")
+        .select("id, cliente_id, clientes(nome)")
+        .eq("id", accountId)
+        .single();
+
+      if (account) {
+        const clienteNome = (account as any).clientes?.nome ?? "desconhecido";
+        const clienteId = account.cliente_id;
+
+        // Buscar perfil do banqueiro (nome e leader_id)
+        const { data: profile } = await adminClient
+          .from("profiles")
+          .select("nome, leader_id")
+          .eq("id", auth.user.id)
+          .single();
+
+        if (profile?.leader_id) {
+          // Criar notificação para o líder
+          await adminClient.from("notifications").insert({
+            leader_id: auth.user.id,
+            banqueiro_id: profile.leader_id,
+            cliente_nome: clienteNome,
+            cliente_id: clienteId,
+            conta_id: accountId,
+            tipo: "tpa_entregue",
+            leader_nome: profile.nome ?? "Bankeiro",
+            mensagem: `TPA entregue — ${clienteNome}`,
+            descricao: `O bankeiro ${profile.nome} marcou o TPA como entregue para a cliente ${clienteNome}.`,
+            lida: false,
+          }).then(({ error: notifErr }) => {
+            if (notifErr) console.error("Erro ao notificar líder:", notifErr);
+          });
+        }
+      }
+    } catch (e) {
+      console.error("Erro ao criar notificação de TPA entregue:", e);
+    }
+  }
+
   revalidatePath("/banqueiro/clientes");
   revalidatePath("/banqueiro");
   return {};

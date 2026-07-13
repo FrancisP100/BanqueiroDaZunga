@@ -14,8 +14,10 @@ import {
   LogOut,
   Bell,
   BellOff,
+  CheckCheck,
 } from "lucide-react";
-import { marcarNotificacaoLida } from "@/app/banqueiro/actions";
+import NotificationCard from "@/components/notification-card";
+import { marcarNotificacaoLida, marcarTodasLidas } from "@/app/banqueiro/actions";
 import { ChangePasswordModal } from "@/components/change-password-modal";
 import { ChartTooltip } from "@/components/chart-tooltip";
 import {
@@ -31,6 +33,7 @@ import {
   Tooltip as RechartsTooltip,
   Legend,
 } from "recharts";
+import type { Notification } from "@/lib/types";
 
 type ReportPeriod = "dia" | "semana" | "mes" | "ano";
 
@@ -122,7 +125,7 @@ export default function BanqueiroDashboard() {
         .single();
       if (presenca) setPresencaHoje(presenca);
 
-      // Carregar notificações
+      // Carregar notificações (com todos os novos campos)
       const { data: notifs } = await supabase
         .from("notifications")
         .select("*")
@@ -364,6 +367,23 @@ export default function BanqueiroDashboard() {
   const mapsEmbedSrc = coords
     ? `https://www.google.com/maps?q=${coords.lat},${coords.lng}&z=16&output=embed`
     : null;
+
+  // Handler para marcar notificação como lida e actualizar o estado local
+  async function handleMarkAsRead(id: string) {
+    await marcarNotificacaoLida(id);
+    setNotificacoes((prev: any[]) =>
+      prev.map((n: any) =>
+        n.id === id ? { ...n, lida: true } : n,
+      ),
+    );
+  }
+
+  async function handleMarkAllAsRead() {
+    await marcarTodasLidas();
+    setNotificacoes((prev: any[]) =>
+      prev.map((n: any) => ({ ...n, lida: true })),
+    );
+  }
 
   if (loading)
     return (
@@ -705,21 +725,32 @@ export default function BanqueiroDashboard() {
         </CardContent>
       </Card>
 
-      {/* Notificações do Líder */}
+      {/* Notificações — expandidas com NotificationCard */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg font-semibold text-gray-800 flex items-center gap-2">
               <Bell size={20} className="text-bci-magenta" />
-              Notificações do Líder
+              Notificações
             </CardTitle>
-            {notificacoes.filter((n) => !n.lida).length > 0 && (
-              <span className="rounded-full bg-bci-magenta px-2.5 py-0.5 text-xs font-bold text-white">
-                {notificacoes.filter((n) => !n.lida).length} nova{notificacoes.filter((n) => !n.lida).length > 1 ? 's' : ''}
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {notificacoes.filter((n) => !n.lida).length > 0 && (
+                <button
+                  onClick={handleMarkAllAsRead}
+                  className="text-xs font-bold text-bci-magenta hover:text-bci-magenta/70 transition-colors"
+                >
+                  <CheckCheck size={14} className="inline mr-0.5" />
+                  Marcar todas lidas
+                </button>
+              )}
+              {notificacoes.filter((n) => !n.lida).length > 0 && (
+                <span className="rounded-full bg-bci-magenta px-2.5 py-0.5 text-xs font-bold text-white">
+                  {notificacoes.filter((n) => !n.lida).length} nova{notificacoes.filter((n) => !n.lida).length > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
           </div>
-          <p className="text-sm text-gray-500">Alertas enviados pelo seu líder sobre TPAs pendentes</p>
+          <p className="text-sm text-gray-500">Alertas do líder e notificações do sistema</p>
         </CardHeader>
         <CardContent>
           {notificacoes.length === 0 ? (
@@ -729,42 +760,30 @@ export default function BanqueiroDashboard() {
             </div>
           ) : (
             <div className="space-y-2">
-              {notificacoes.map((n) => (
-                <div
-                  key={n.id}
-                  className={`rounded-xl border p-4 transition-colors ${
-                    n.lida
-                      ? 'border-bci-line bg-white'
-                      : 'border-bci-magenta/30 bg-bci-magenta/5'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1">
-                      <p className={`text-sm ${n.lida ? 'text-gray-600' : 'font-bold text-gray-900'}`}>
-                        {n.mensagem}
-                      </p>
-                      <p className="mt-1 text-xs text-gray-400">
-                        {new Date(n.created_at).toLocaleString('pt-PT')}
-                      </p>
-                    </div>
-                    {!n.lida && (
-                      <button
-                        onClick={async () => {
-                          await marcarNotificacaoLida(n.id);
-                          setNotificacoes((prev: any[]) =>
-                            prev.map((notif: any) =>
-                              notif.id === n.id ? { ...notif, lida: true } : notif,
-                            ),
-                          );
-                        }}
-                        className="shrink-0 rounded-lg bg-bci-magenta/10 px-2.5 py-1 text-xs font-bold text-bci-magenta hover:bg-bci-magenta hover:text-white transition-colors"
-                      >
-                        Marcar lida
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
+              {notificacoes.map((n: any) => {
+                // Mapear campos do DB para o tipo Notification
+                const notif: Notification = {
+                  id: n.id,
+                  leaderId: n.leader_id,
+                  banqueiroId: n.banqueiro_id,
+                  clienteNome: n.cliente_nome,
+                  clienteId: n.cliente_id ?? undefined,
+                  contaId: n.conta_id ?? undefined,
+                  mensagem: n.mensagem,
+                  tipo: n.tipo ?? "alerta_tpa",
+                  descricao: n.descricao ?? undefined,
+                  leaderNome: n.leader_nome ?? undefined,
+                  lida: n.lida,
+                  createdAt: n.created_at,
+                };
+                return (
+                  <NotificationCard
+                    key={n.id}
+                    notification={notif}
+                    onMarkAsRead={handleMarkAsRead}
+                  />
+                );
+              })}
             </div>
           )}
         </CardContent>

@@ -19,9 +19,10 @@ async function getAdminClient() {
 
 /**
  * Send notifications from the leader to banqueiros about pending TPA clients.
+ * Now includes tipo, descricao and leader_nome for the expanded notification system.
  */
 export async function notificarTpasPendentes(
-  banqueirosClientes: { banqueiroId: string; clienteNome: string; contaId: string }[],
+  banqueirosClientes: { banqueiroId: string; clienteNome: string; contaId: string; clienteId?: string }[],
   mensagem?: string,
 ): Promise<{ error?: string; count?: number }> {
   if (!hasSupabaseEnv()) return { error: "Supabase não configurado" };
@@ -32,13 +33,25 @@ export async function notificarTpasPendentes(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Não autenticado" };
 
+  // Get the leader's name
+  const { data: leaderProfile } = await supabase
+    .from("profiles")
+    .select("nome")
+    .eq("id", user.id)
+    .single();
+  const leaderNome = leaderProfile?.nome ?? "Líder";
+
   const adminClient = await getAdminClient();
 
-  const inserts = banqueirosClientes.map(({ banqueiroId, clienteNome, contaId }) => ({
+  const inserts = banqueirosClientes.map(({ banqueiroId, clienteNome, contaId, clienteId }) => ({
     leader_id: user.id,
     banqueiro_id: banqueiroId,
     cliente_nome: clienteNome,
+    cliente_id: clienteId ?? null,
     conta_id: contaId,
+    tipo: "alerta_tpa" as const,
+    leader_nome: leaderNome,
+    descricao: `O líder ${leaderNome} notificou sobre o TPA pendente de ${clienteNome}. Por favor, entregue o TPA ao cliente e actualize o estado no sistema.`,
     mensagem: mensagem ?? `Cliente ${clienteNome} tem TPA pendente — por favor dar seguimento.`,
     lida: false,
   }));

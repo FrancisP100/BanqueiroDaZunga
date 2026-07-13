@@ -88,13 +88,19 @@ export type PunctualityRule = {
   toleranciaMin: number;
 };
 
+export type NotificationType = "alerta_tpa" | "abertura_conta" | "tpa_entregue";
+
 export type Notification = {
   id: string;
   leaderId: string;
   banqueiroId: string;
   clienteNome: string;
+  clienteId?: string;
   contaId?: string;
   mensagem: string;
+  tipo: NotificationType;
+  descricao?: string;
+  leaderNome?: string;
   lida: boolean;
   createdAt: string;
 };

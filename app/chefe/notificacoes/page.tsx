@@ -15,6 +15,7 @@ import { getAllowedMarketIds } from '@/lib/leader-scope';
 
 type ClienteTpaPendente = {
   contaId: string;
+  clienteId?: string;
   clienteNome: string;
   clienteBi: string;
   banqueiroId: string;
@@ -48,13 +49,13 @@ export default function NotificacoesPage() {
         // Fetch accounts with pending TPA
         let query = supabase
           .from('accounts')
-          .select('id, pacote, created_at, banqueiro_id, mercado_id, clientes(nome, bi), profiles(nome)')
+          .select('id, pacote, created_at, banqueiro_id, mercado_id, clientes(id, nome, bi), profiles(nome)')
           .eq('tpa_status', 'pendente')
           .order('created_at', { ascending: false });
 
         const { data: accs } = await query;
 
-        let filtered = accs ?? [];
+        let filtered: any[] = accs ?? [];
 
         // Filter by leader's balcao if restricted
         if (!canSeeAll) {
@@ -66,6 +67,7 @@ export default function NotificacoesPage() {
         setClientes(
           filtered.map((a: any) => ({
             contaId: a.id,
+            clienteId: a.clientes?.id,
             clienteNome: a.clientes?.nome ?? '---',
             clienteBi: a.clientes?.bi ?? '---',
             banqueiroId: a.banqueiro_id,
@@ -107,6 +109,7 @@ export default function NotificacoesPage() {
       banqueiroId: c.banqueiroId,
       clienteNome: c.clienteNome,
       contaId: c.contaId,
+      clienteId: c.clienteId,
     }));
 
     setResult(null);
