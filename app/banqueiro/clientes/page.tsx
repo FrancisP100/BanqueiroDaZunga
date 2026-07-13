@@ -122,16 +122,17 @@ export default function GestaoClientes() {
               Nenhum cliente encontrado.
             </div>
           ) : (
-            <div className="overflow-hidden rounded-xl border border-bci-line">
+            <div className="overflow-x-auto rounded-xl border border-bci-line">
+              {/* Versão tabela — esconde colunas menos importantes em mobile */}
               <table className="w-full text-left text-sm">
                 <thead className="bg-slate-50 text-xs uppercase text-bci-muted">
                   <tr>
-                    <th className="px-4 py-3">Cliente</th>
-                    <th className="px-4 py-3">BI</th>
-                    <th className="px-4 py-3">Contacto</th>
-                    <th className="px-4 py-3">Contas</th>
-                    <th className="px-4 py-3">Pendentes</th>
-                    <th className="px-4 py-3"></th>
+                    <th className="px-3 sm:px-4 py-3">Cliente</th>
+                    <th className="px-3 sm:px-4 py-3">BI</th>
+                    <th className="hidden sm:table-cell px-3 sm:px-4 py-3">Contacto</th>
+                    <th className="px-3 sm:px-4 py-3 text-center">Contas</th>
+                    <th className="hidden md:table-cell px-3 sm:px-4 py-3">Pendentes</th>
+                    <th className="px-3 sm:px-4 py-3"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -144,41 +145,42 @@ export default function GestaoClientes() {
                         key={cliente.id}
                         className="border-t border-bci-line hover:bg-slate-50/50 transition-colors"
                       >
-                        <td className="px-4 py-3">
+                        <td className="px-3 sm:px-4 py-3">
                           <Link
                             href={`/banqueiro/clientes/${cliente.id}`}
-                            className="flex items-center gap-3"
+                            className="flex items-center gap-2 sm:gap-3"
                           >
-                            <div className="bg-bci-magenta/10 p-2 rounded-full text-bci-magenta flex-shrink-0">
-                              <UserCircle size={18} />
+                            <div className="bg-bci-magenta/10 p-1.5 sm:p-2 rounded-full text-bci-magenta flex-shrink-0">
+                              <UserCircle size={16} className="sm:size-[18px]" />
                             </div>
-                            <span className="font-semibold text-gray-900 hover:text-bci-magenta transition-colors">
+                            <span className="font-semibold text-gray-900 hover:text-bci-magenta transition-colors text-xs sm:text-sm leading-tight">
                               {cliente.nome}
                             </span>
                           </Link>
                         </td>
-                        <td className="px-4 py-3 text-bci-muted">{cliente.bi}</td>
-                        <td className="px-4 py-3 text-bci-muted">{cliente.telefone}</td>
-                        <td className="px-4 py-3 font-bold text-bci-magenta">
+                        <td className="px-3 sm:px-4 py-3 text-bci-muted text-xs sm:text-sm">{cliente.bi}</td>
+                        <td className="hidden sm:table-cell px-3 sm:px-4 py-3 text-bci-muted">{cliente.telefone}</td>
+                        <td className="px-3 sm:px-4 py-3 font-bold text-bci-magenta text-center">
                           {cliente.contas.length}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="hidden md:table-cell px-3 sm:px-4 py-3">
                           {pendentes > 0 ? (
                             <span className="text-amber-600 font-semibold text-xs">
-                              {pendentes} pendente(s)
+                              {pendentes}
                             </span>
                           ) : (
                             <span className="text-emerald-600 text-xs font-medium">
-                              Todas activas
+                              ✓
                             </span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-3 sm:px-4 py-3 text-right">
                           <Link
                             href={`/banqueiro/clientes/${cliente.id}`}
-                            className="inline-flex items-center gap-1 text-xs font-medium text-bci-muted hover:text-bci-magenta transition-colors"
+                            className="inline-flex items-center gap-1 text-xs font-medium text-bci-muted hover:text-bci-magenta transition-colors whitespace-nowrap"
                           >
-                            Detalhes <ArrowRight size={14} />
+                            <span className="hidden sm:inline">Detalhes</span>
+                            <ArrowRight size={14} />
                           </Link>
                         </td>
                       </tr>

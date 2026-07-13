@@ -43,8 +43,7 @@ export default function NotificacoesPage() {
     async function load() {
       setLoading(true);
       try {
-        const allowedMarketIds = await getAllowedMarketIds(supabase);
-        const canSeeAll = allowedMarketIds.size === 0;
+        const { marketIds, isUnrestricted } = await getAllowedMarketIds(supabase);
 
         // Fetch accounts with pending TPA
         let query = supabase
@@ -58,9 +57,9 @@ export default function NotificacoesPage() {
         let filtered: any[] = accs ?? [];
 
         // Filter by leader's balcao if restricted
-        if (!canSeeAll) {
+        if (!isUnrestricted) {
           filtered = filtered.filter(
-            (a: any) => a.mercado_id && allowedMarketIds.has(a.mercado_id),
+            (a: any) => a.mercado_id && marketIds.has(a.mercado_id),
           );
         }
 

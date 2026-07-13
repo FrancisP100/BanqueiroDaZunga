@@ -40,10 +40,9 @@ export default function RelatoriosPage() {
       let filtered = accs ?? [];
 
       // Filtro transparente pelo balcão do líder (sem UI visível)
-      const allowedMarketIds = await getAllowedMarketIds(supabase);
-      const canSeeAll = allowedMarketIds.size === 0;
-      if (!canSeeAll) {
-        filtered = filtered.filter((a: any) => a.mercado_id && allowedMarketIds.has(a.mercado_id));
+      const { marketIds, isUnrestricted } = await getAllowedMarketIds(supabase);
+      if (!isUnrestricted) {
+        filtered = filtered.filter((a: any) => a.mercado_id && marketIds.has(a.mercado_id));
       }
 
       setAccounts(filtered);

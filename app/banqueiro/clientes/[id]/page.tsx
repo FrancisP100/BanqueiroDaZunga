@@ -226,31 +226,31 @@ export default function InspecionarCliente() {
       </Link>
 
       {/* Cabeçalho do cliente */}
-      <div className="rounded-2xl border border-bci-line bg-white p-6 shadow-card">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-bci-magenta/70">
+      <div className="rounded-2xl border border-bci-line bg-white p-4 sm:p-6 shadow-card">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] sm:text-xs font-extrabold uppercase tracking-[0.18em] text-bci-magenta/70">
               Inspecção de Cliente
             </p>
-            <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-bci-ink">
+            <h1 className="mt-1 text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight text-bci-ink break-words">
               {cliente.nome}
             </h1>
-            <div className="mt-3 flex flex-wrap gap-4 text-sm text-bci-muted">
-              <span className="flex items-center gap-1.5"><CreditCard size={14} /> {cliente.bi}</span>
-              <span className="flex items-center gap-1.5"><Phone size={14} /> {cliente.telefone ?? "—"}</span>
-              <span className="flex items-center gap-1.5"><MapPin size={14} /> {cliente.endereco ?? "—"}</span>
-              {cliente.bi_emissao && <span className="text-xs">Emissão BI: {cliente.bi_emissao}</span>}
-              {cliente.bi_validade && <span className="text-xs">Validade BI: {cliente.bi_validade}</span>}
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs sm:text-sm text-bci-muted">
+              <span className="flex items-center gap-1.5"><CreditCard size={13} className="sm:size-[14px]" /> {cliente.bi}</span>
+              <span className="flex items-center gap-1.5"><Phone size={13} className="sm:size-[14px]" /> {cliente.telefone ?? "—"}</span>
+              <span className="flex items-center gap-1.5"><MapPin size={13} className="sm:size-[14px]" /> {cliente.endereco ?? "—"}</span>
+              {cliente.bi_emissao && <span className="text-[10px] sm:text-xs">Emissão BI: {cliente.bi_emissao}</span>}
+              {cliente.bi_validade && <span className="text-[10px] sm:text-xs">Validade BI: {cliente.bi_validade}</span>}
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex sm:flex-col gap-2 shrink-0">
             <button onClick={openEdit}
-              className="inline-flex items-center gap-1 rounded-lg bg-bci-goldSoft px-3 py-1.5 text-xs font-extrabold text-bci-gold hover:bg-bci-gold hover:text-white transition-colors"
+              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1 rounded-lg bg-bci-goldSoft px-3 py-1.5 text-xs font-extrabold text-bci-gold hover:bg-bci-gold hover:text-white transition-colors"
             >
               <Pencil size={14} /> Editar
             </button>
             <button onClick={() => { setDeleteTarget({ type: "cliente", id: cliente.id }); setDeleteOpen(true); }}
-              className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-extrabold text-red-600 hover:bg-red-600 hover:text-white transition-colors"
+              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-extrabold text-red-600 hover:bg-red-600 hover:text-white transition-colors"
             >
               <Trash2 size={14} /> Eliminar
             </button>
@@ -266,16 +266,16 @@ export default function InspecionarCliente() {
             <h2 className="font-extrabold text-bci-ink">Contas ({contas.length})</h2>
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase text-bci-muted">
+        <div className="overflow-x-auto -mx-5 px-5">
+          <table className="w-full text-left text-xs sm:text-sm min-w-[550px] sm:min-w-0">
+            <thead className="bg-slate-50 text-[10px] sm:text-xs uppercase text-bci-muted">
               <tr>
-                <th className="px-4 py-3">Pacote</th>
-                <th className="px-4 py-3">Mercado</th>
-                <th className="px-4 py-3">Data/Hora</th>
-                <th className="px-4 py-3">Estado</th>
-                <th className="px-4 py-3">TPA</th>
-                <th className="px-4 py-3">Acções</th>
+                <th className="px-2 sm:px-4 py-3">Pacote</th>
+                <th className="hidden sm:table-cell px-2 sm:px-4 py-3">Mercado</th>
+                <th className="px-2 sm:px-4 py-3">Data/Hora</th>
+                <th className="px-2 sm:px-4 py-3">Estado</th>
+                <th className="px-2 sm:px-4 py-3">TPA</th>
+                <th className="px-2 sm:px-4 py-3">Acções</th>
               </tr>
             </thead>
             <tbody>
@@ -284,46 +284,47 @@ export default function InspecionarCliente() {
               ) : (
                 contas.map((conta: any) => (
                   <tr key={conta.id} className="border-t border-bci-line hover:bg-slate-50/50">
-                    <td className="px-4 py-3 font-bold">{conta.pacote}</td>
-                    <td className="px-4 py-3 text-bci-muted">{conta.markets?.nome ?? "—"}</td>
-                    <td className="px-4 py-3 text-bci-muted">
+                    <td className="px-2 sm:px-4 py-3 font-bold whitespace-nowrap">{conta.pacote}</td>
+                    <td className="hidden sm:table-cell px-2 sm:px-4 py-3 text-bci-muted">{conta.markets?.nome ?? "—"}</td>
+                    <td className="px-2 sm:px-4 py-3 text-bci-muted whitespace-nowrap">
                       {new Date(conta.created_at).toLocaleDateString()}
-                      {conta.hora_abertura ? ` ${String(conta.hora_abertura).slice(0, 5)}` : ""}
+                      {conta.hora_abertura ? <span className="hidden sm:inline"> {String(conta.hora_abertura).slice(0, 5)}</span> : ""}
                     </td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    <td className="px-2 sm:px-4 py-3">
+                      <span className={`inline-block px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium leading-tight ${
                         conta.status === "aberta" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
-                      }`}>{conta.status.toUpperCase()}</span>
+                      }`}>{conta.status === "aberta" ? "Aberta" : "Pend."}</span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-2 sm:px-4 py-3">
                       <button
                         disabled={isPending}
                         onClick={() => handleTpaToggle(conta.id, conta.tpa_status)}
-                        className={`group text-xs font-bold px-2 py-1 rounded-full transition-all duration-300 ease-in-out ${
+                        className={`group text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-1 rounded-full transition-all duration-300 ease-in-out whitespace-nowrap ${
                           conta.tpa_status === "entregue"
                             ? "bg-emerald-100 text-emerald-700"
                             : "bg-amber-100 text-amber-700 hover:bg-emerald-100 hover:text-emerald-700"
                         }`}
                       >
                         {conta.tpa_status === "entregue" ? (
-                          "Entregue ✓"
+                          "Entregue"
                         ) : (
                           <span className="relative">
-                            <span className="group-hover:opacity-0 transition-opacity duration-300">Pendente</span>
+                            <span className="group-hover:opacity-0 transition-opacity duration-300">Pend.</span>
                             <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">Entregar</span>
                           </span>
                         )}
                       </button>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
+                    <td className="px-2 sm:px-4 py-3">
+                      <div className="flex items-center gap-1 sm:gap-2 flex-nowrap">
                         {conta.status === "pendente" && (
                           <button
                             disabled={isPending}
                             onClick={() => handleActivate(conta.id)}
-                            className="flex items-center gap-1 text-xs font-bold text-white bg-bci-magenta px-2.5 py-1.5 rounded-full hover:bg-bci-magenta/90 disabled:opacity-50"
+                            className="flex items-center gap-0.5 sm:gap-1 text-[10px] sm:text-xs font-bold text-white bg-bci-magenta px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-full hover:bg-bci-magenta/90 disabled:opacity-50 whitespace-nowrap"
                           >
-                            <CheckCircle2 size={12} /> Activar
+                            <CheckCircle2 size={10} className="sm:size-[12px]" />
+                            <span className="hidden sm:inline">Activar</span>
                           </button>
                         )}
                         <button
@@ -332,7 +333,7 @@ export default function InspecionarCliente() {
                           className="text-red-500 hover:text-red-700 p-1"
                           title="Eliminar conta"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={13} className="sm:size-[14px]" />
                         </button>
                       </div>
                     </td>

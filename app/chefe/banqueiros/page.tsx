@@ -49,11 +49,10 @@ export default function BanqueirosPage() {
         });
 
         // Filter by this leader's balcão
-        const allowedMarketIds = await getAllowedMarketIds(supabase);
-        const canSeeAll = allowedMarketIds.size === 0;
+        const { marketIds, isUnrestricted } = await getAllowedMarketIds(supabase);
 
         const filteredBanqueiros = (bResult.data ?? [])
-          .filter((b: { local_id: string | null }) => canSeeAll || (b.local_id && allowedMarketIds.has(b.local_id)))
+          .filter((b: { local_id: string | null }) => isUnrestricted || (b.local_id && marketIds.has(b.local_id)))
           .map(
             (b: {
               id: string;

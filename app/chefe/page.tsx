@@ -29,11 +29,10 @@ export default function LiderDashboard() {
     const mMap: Record<string, string> = {};
     (mResult.data ?? []).forEach((m: { id: string; nome: string }) => { mMap[m.id] = m.nome; });
 
-    const allowedMarketIds = await getAllowedMarketIds(supabase);
-    const canSeeAll = allowedMarketIds.size === 0;
+    const { marketIds, isUnrestricted } = await getAllowedMarketIds(supabase);
 
     const banqList: BanqueiroRow[] = (bResult.data ?? [])
-      .filter(b => canSeeAll || (b.local_id && allowedMarketIds.has(b.local_id)))
+      .filter(b => isUnrestricted || (b.local_id && marketIds.has(b.local_id)))
       .map((b: any) => ({
         id: b.id,
         nome: b.nome,
