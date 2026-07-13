@@ -18,10 +18,7 @@ function getRangeStart(period: ReportPeriod): string {
 
 export default function RelatoriosPage() {
   const [period, setPeriod] = useState<ReportPeriod>('dia');
-  const [balcaoFiltro, setBalcaoFiltro] = useState<string>('todos');
-  const [provinciaFiltro, setProvinciaFiltro] = useState<string>('todas');
   const [loading, setLoading] = useState(true);
-  const [markets, setMarkets] = useState<any[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [porBanqueiro, setPorBanqueiro] = useState<Record<string, { nome: string; contas: number; tpa: number }>>({});
 
@@ -35,28 +32,18 @@ export default function RelatoriosPage() {
       setLoading(true);
       const since = getRangeStart(period);
 
-      const { data: mkts } = await supabase.from('markets').select('id, nome, provincia, balcao');
-      setMarkets(mkts ?? []);
-
       const { data: accs } = await supabase
         .from('accounts')
-        .select('id, pacote, status, tpa_status, created_at, mercado_id, banqueiro_id, profiles(nome), markets(nome, balcao, provincia)')
+        .select('id, pacote, status, tpa_status, created_at, mercado_id, banqueiro_id, profiles(nome)')
         .gte('created_at', since);
 
       let filtered = accs ?? [];
 
-      // Filter by this leader's balcão
+      // Filtro transparente pelo balcão do líder (sem UI visível)
       const allowedMarketIds = await getAllowedMarketIds(supabase);
       const canSeeAll = allowedMarketIds.size === 0;
       if (!canSeeAll) {
         filtered = filtered.filter((a: any) => a.mercado_id && allowedMarketIds.has(a.mercado_id));
-      }
-
-      if (balcaoFiltro !== 'todos') {
-        filtered = filtered.filter((a: any) => a.mercado_id === balcaoFiltro);
-      }
-      if (provinciaFiltro !== 'todas') {
-        filtered = filtered.filter((a: any) => a.markets?.provincia === provinciaFiltro);
       }
 
       setAccounts(filtered);
@@ -75,23 +62,24 @@ export default function RelatoriosPage() {
     }
     load();
     // eslint-disable-next-line
-  }, [period, balcaoFiltro, provinciaFiltro]);
+  }, [period]);
 
   const contasAbertas = accounts.filter((a) => a.status === 'aberta').length;
   const pacotesVendidos = accounts.length;
   const tpasEntregues = accounts.filter((a) => a.tpa_status === 'entregue').length;
   const tpasPendentes = accounts.filter((a) => a.tpa_status === 'pendente').length;
 
-  const provincias = Array.from(new Set(markets.map((m) => m.provincia)));
-
   return (
     <div className="space-y-8">
       <div>
         <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-bci-blue/70">Relatórios</p>
         <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-bci-ink">O verdadeiro relatório</h1>
+        <p className="mt-2 text-sm text-bci-muted">
+          Dados filtrados automaticamente para o seu balcão.
+        </p>
       </div>
 
-      {/* Filtros */}
+      {/* Filtro por período apenas */}
       <div className="flex flex-wrap gap-3">
         <div className="flex rounded-xl border border-bci-line bg-white p-1">
           {(['dia', 'semana', 'mes', 'ano'] as ReportPeriod[]).map((p) => (
@@ -101,26 +89,6 @@ export default function RelatoriosPage() {
             </button>
           ))}
         </div>
-
-        <select
-  value={balcaoFiltro}
-  onChange={(e) => setBalcaoFiltro(e.target.value)}
-  aria-label="Filtrar por mercado ou balcão"
-  className="rounded-xl border border-bci-line bg-white px-4 py-2 text-sm font-medium outline-none focus:border-bci-blue"
->
-  <option value="todos">Todos os mercados/balcões</option>
-  {markets.map((m) => <option key={m.id} value={m.id}>{m.nome} {m.balcao ? `(${m.balcao})` : ''}</option>)}
-</select>
-
-<select
-  value={provinciaFiltro}
-  onChange={(e) => setProvinciaFiltro(e.target.value)}
-  aria-label="Filtrar por província"
-  className="rounded-xl border border-bci-line bg-white px-4 py-2 text-sm font-medium outline-none focus:border-bci-blue"
->
-  <option value="todas">Todas as províncias</option>
-  {provincias.map((p) => <option key={p} value={p}>{p}</option>)}
-</select>
       </div>
 
       {/* Resumo */}

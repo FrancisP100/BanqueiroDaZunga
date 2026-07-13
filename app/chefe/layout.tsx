@@ -5,14 +5,15 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { createBrowserClient } from '@/lib/supabase/client';
-import { LayoutDashboard, ClipboardList, Users, Bell, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, Users, Bell, BellPlus, LogOut, Menu, X } from 'lucide-react';
 import { BciLogo } from '@/components/ui/bci-logo';
 
 const navItems = [
   { name: 'Dashboard', href: '/chefe', icon: LayoutDashboard },
   { name: 'Relatórios', href: '/chefe/relatorios', icon: ClipboardList },
   { name: 'Bankeiros', href: '/chefe/banqueiros', icon: Users },
-  { name: 'Alertas TPAs', href: '/chefe/notificacoes', icon: Bell },
+  { name: 'Notificações', href: '/chefe/notificacoes-recebidas', icon: Bell },
+  { name: 'Enviar Alertas', href: '/chefe/notificacoes', icon: BellPlus },
 ];
 
 export default function ChefeLayout({ children }: { children: React.ReactNode }) {
