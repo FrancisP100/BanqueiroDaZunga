@@ -193,6 +193,26 @@ export async function eliminarCliente(clienteId: string) {
     .single();
   if (!profile) return { error: "Perfil não encontrado" };
 
+  // Remover notificações associadas (usar adminClient para bypass RLS)
+  const adminClient = await getAdminClient();
+  const contas = await supabase
+    .from("accounts")
+    .select("id")
+    .eq("cliente_id", clienteId)
+    .eq("banqueiro_id", profile.id);
+
+  if (contas.data && contas.data.length > 0) {
+    const contaIds = contas.data.map((c: any) => c.id);
+    await adminClient.from("notifications").delete().in("conta_id", contaIds).then(({ error: notifErr }) => {
+      if (notifErr) console.error("Erro ao limpar notificações das contas:", notifErr);
+    });
+  }
+
+  // Remover notificações associadas ao cliente
+  await adminClient.from("notifications").delete().eq("cliente_id", clienteId).then(({ error: notifErr }) => {
+    if (notifErr) console.error("Erro ao limpar notificações do cliente:", notifErr);
+  });
+
   // Apagar contas associadas a este cliente E a este banqueiro
   const { error: delAccountsError } = await supabase
     .from("accounts")
@@ -231,6 +251,12 @@ export async function eliminarConta(accountId: string) {
   if (!account) return { error: "Conta não encontrada" };
   if (account.banqueiro_id !== auth.user.id)
     return { error: "Só o banqueiro responsável pode eliminar esta conta" };
+
+  // Remover notificações associadas antes de eliminar a conta (evita FK violation)
+  const adminClient = await getAdminClient();
+  await adminClient.from("notifications").delete().eq("conta_id", accountId).then(({ error: notifErr }) => {
+    if (notifErr) console.error("Erro ao limpar notificações da conta:", notifErr);
+  });
 
   const { error } = await supabase.from("accounts").delete().eq("id", accountId);
   if (error) return { error: "Erro ao eliminar conta: " + error.message };

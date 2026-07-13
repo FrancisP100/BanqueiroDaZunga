@@ -9,7 +9,10 @@ const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   title: "Bankeiros da Zunga - BCI",
-  description: "MVP modular para gestão de banqueiros, contas, presença GPS e mercados."
+  description: "MVP modular para gestão de banqueiros, contas, presença GPS e mercados.",
+  icons: {
+    icon: "/Logo1.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
