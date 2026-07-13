@@ -40,6 +40,61 @@ export async function createMarket(
   revalidatePath("/admin/mercados");
 }
 
+export async function editMarket(
+  _prevState: { error: string } | null,
+  formData: FormData
+): Promise<{ error: string } | null> {
+  if (!hasSupabaseEnv()) return null;
+
+  const marketId = String(formData.get("id") ?? "").trim();
+  if (!marketId) return { error: "ID do mercado é obrigatório." };
+
+  const adminClient = await getAdminClient();
+
+  const { error } = await adminClient
+    .from("markets")
+    .update({
+      nome:        String(formData.get("nome")        ?? ""),
+      provincia:   String(formData.get("provincia")   ?? ""),
+      tipo:        String(formData.get("tipo")         ?? "mercado"),
+      balcao:      String(formData.get("balcao")       ?? "") || null,
+      latitude:    Number(formData.get("latitude")),
+      longitude:   Number(formData.get("longitude")),
+      raio_metros: Number(formData.get("raio_metros") ?? 100),
+    })
+    .eq("id", marketId);
+
+  if (error) return { error: "Erro ao actualizar mercado: " + error.message };
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/mercados");
+  revalidatePath(`/admin/mercados/${marketId}`);
+  return null;
+}
+
+export async function deleteMarket(marketId: string): Promise<{ error?: string }> {
+  if (!hasSupabaseEnv()) return { error: "Supabase não configurado" };
+
+  const adminClient = await getAdminClient();
+
+  // Desassociar perfis que referenciam este mercado
+  await adminClient
+    .from("profiles")
+    .update({ local_id: null })
+    .eq("local_id", marketId);
+
+  const { error } = await adminClient
+    .from("markets")
+    .delete()
+    .eq("id", marketId);
+
+  if (error) return { error: "Erro ao eliminar mercado: " + error.message };
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/mercados");
+  return {};
+}
+
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function registerProfile(

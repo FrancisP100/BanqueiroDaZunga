@@ -6,7 +6,7 @@ import Link from "next/link";
 import { createBrowserClient } from '@/lib/supabase/client';
 import { ArrowLeft, Save } from "lucide-react";
 import { editProfile } from "@/app/admin/actions";
-import { PROVINCIAS_ANGOLA } from "@/lib/constants";
+import { ProvinciaSelect } from "@/components/ui/provincia-select";
 
 export default function EditarPerfilPage() {
   const params = useParams();
@@ -161,17 +161,12 @@ export default function EditarPerfilPage() {
         <label className="text-sm font-bold text-bci-ink">
           Província
           <span className="text-bci-magenta ml-1">*</span>
-          <select
+          <ProvinciaSelect
             name="provincia"
             defaultValue={profile.provincia ?? ""}
             required
-            className="mt-2 w-full rounded-xl border border-bci-line bg-white px-4 py-3 font-medium outline-none focus:border-bci-navy focus:ring-4 focus:ring-bci-navySoft"
-          >
-            <option value="">— Selecione a província —</option>
-            {PROVINCIAS_ANGOLA.map((p) => (
-              <option key={p} value={p}>{p}</option>
-            ))}
-          </select>
+            className="mt-2 focus:border-bci-navy focus:ring-bci-navySoft"
+          />
         </label>
         <label className="text-sm font-bold text-bci-ink">
           Número do Balcão

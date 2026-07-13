@@ -2,17 +2,16 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { Store, Search, BarChart3 } from "lucide-react";
+import { Store, Search, BarChart3, Pencil } from "lucide-react";
 import type { Market } from "@/lib/types";
+import { ProvinciaSelect } from "@/components/ui/provincia-select";
+import { DeleteMarketButton } from "@/components/delete-market-button";
 
 export function MarketsList({ markets }: { markets: Market[] }) {
   const [filterProvincia, setFilterProvincia] = useState<string>("todas");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const provincias = useMemo(
-    () => Array.from(new Set(markets.map((m) => m.provincia))).sort(),
-    [markets],
-  );
+
 
   const filtered = useMemo(() => {
     let list = markets;
@@ -66,19 +65,13 @@ export function MarketsList({ markets }: { markets: Market[] }) {
         </div>
 
         {/* Filtro por província */}
-        <select
+        <ProvinciaSelect
           value={filterProvincia}
           onChange={(e) => setFilterProvincia(e.target.value)}
-          className="rounded-xl border border-bci-line bg-white px-4 py-2.5 text-sm font-medium outline-none focus:border-bci-magenta focus:ring-4 focus:ring-pink-50 transition-all min-w-[150px]"
+          placeholder="Todas as províncias"
+          className="px-4 py-2.5 text-sm focus:border-bci-magenta focus:ring-pink-50 min-w-[150px]"
           aria-label="Filtrar por província"
-        >
-          <option value="todas">Todas as províncias</option>
-          {provincias.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
+        />
 
         {/* Contador de resultados */}
         <div className="flex items-center text-xs font-semibold text-bci-muted px-2">
@@ -129,13 +122,27 @@ export function MarketsList({ markets }: { markets: Market[] }) {
                     {market.balcao ?? "—"}
                   </td>
                   <td className="px-3 sm:px-4 py-3 whitespace-nowrap text-right">
-                    <Link
-                      href={`/admin/mercados/${market.id}`}
-                      className="inline-flex items-center gap-1 rounded-lg bg-bci-navySoft px-2.5 py-1.5 text-xs font-bold text-bci-navy hover:bg-bci-navy hover:text-white transition-colors"
-                    >
-                      <BarChart3 size={12} />
-                      <span className="hidden sm:inline">Dashboard</span>
-                    </Link>
+                    <div className="flex items-center gap-1.5 justify-end">
+                      <Link
+                        href={`/admin/mercados/${market.id}`}
+                        className="inline-flex items-center gap-1 rounded-lg bg-bci-navySoft px-2.5 py-1.5 text-xs font-bold text-bci-navy hover:bg-bci-navy hover:text-white transition-colors"
+                      >
+                        <BarChart3 size={12} />
+                        <span className="hidden sm:inline">Dashboard</span>
+                      </Link>
+                      <Link
+                        href={`/admin/mercados/${market.id}/edit`}
+                        className="inline-flex items-center gap-1 rounded-lg bg-bci-goldSoft px-2.5 py-1.5 text-xs font-bold text-bci-gold hover:bg-bci-gold hover:text-white transition-colors"
+                      >
+                        <Pencil size={12} />
+                        <span className="hidden sm:inline">Editar</span>
+                      </Link>
+                      <DeleteMarketButton
+                        marketId={market.id}
+                        marketName={market.nome}
+                        compact
+                      />
+                    </div>
                   </td>
                 </tr>
               ))}

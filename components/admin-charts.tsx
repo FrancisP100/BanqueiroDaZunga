@@ -11,6 +11,7 @@ import { Users, Store, Building2, MapPin, Calendar, CheckCircle, Clock, XCircle 
 import type { ReportPeriod } from '@/lib/types';
 import { PresenceBadge, PunctualityBadge } from '@/components/ui/status-badge';
 import { ChartTooltip } from '@/components/chart-tooltip';
+import { ProvinciaSelect } from '@/components/ui/provincia-select';
 
 interface StatsData {
   totalBanqueiros: number;
@@ -35,7 +36,7 @@ interface ProvinciaData {
 export function AdminCharts() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<StatsData | null>(null);
-  const [provincias, setProvincias] = useState<string[]>([]);
+
   const [selectedProvincia, setSelectedProvincia] = useState<string>('todas');
   const [selectedMercado, setSelectedMercado] = useState<string>('todos');
   const [selectedBalcao, setSelectedBalcao] = useState<string>('todos');
@@ -96,8 +97,7 @@ export function AdminCharts() {
         const mercadosList = marketsRes.data ?? [];
         setMercados(mercadosList);
 
-        const provinciasSet = new Set(mercadosList.map((m: any) => m.provincia));
-        setProvincias(Array.from(provinciasSet).sort() as string[]);
+
 
       } catch (err) {
         console.error('Erro ao carregar estatísticas:', err);
@@ -386,17 +386,13 @@ export function AdminCharts() {
         <MapPin size={18} className="text-bci-magenta" />
         <span className="text-sm font-bold text-bci-ink">Filtrar por:</span>
 
-        <select
+        <ProvinciaSelect
           value={selectedProvincia}
           onChange={(e) => { setSelectedProvincia(e.target.value); setSelectedMercado('todos'); }}
-          className="rounded-xl border border-bci-line bg-white px-4 py-2 text-sm font-medium outline-none focus:border-bci-magenta"
+          placeholder="Todas as províncias"
+          className="px-4 py-2 text-sm focus:border-bci-magenta"
           aria-label="Filtrar por província"
-        >
-          <option value="todas">Todas as províncias</option>
-          {provincias.map((p) => (
-            <option key={p} value={p}>{p}</option>
-          ))}
-        </select>
+        />
 
         <select
           value={selectedMercado}

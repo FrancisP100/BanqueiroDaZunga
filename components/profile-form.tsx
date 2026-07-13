@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useRef } from "react";
 import { registerProfile as defaultRegisterProfile } from "@/app/banqueiro/register/actions";
 import type { Market, UserRole } from "@/lib/types";
-import { PROVINCIAS_ANGOLA } from "@/lib/constants";
+import { ProvinciaSelect } from "@/components/ui/provincia-select";
 
 type RegisterAction = (
   prevState: { error: string } | null,
@@ -101,16 +101,7 @@ export function ProfileForm({
       <label className="text-sm font-bold text-bci-ink">
         Provincia
         <span className="text-bci-magenta ml-1">*</span>
-        <select
-          name="provincia"
-          required
-          className="mt-2 w-full rounded-xl border border-bci-line bg-white px-4 py-3 font-medium outline-none focus:border-bci-pink focus:ring-4 focus:ring-pink-100"
-        >
-          <option value="">— Selecione a província —</option>
-          {PROVINCIAS_ANGOLA.map((p) => (
-            <option key={p} value={p}>{p}</option>
-          ))}
-        </select>
+        <ProvinciaSelect name="provincia" required className="mt-2" />
       </label>
       <label className="text-sm font-bold text-bci-ink">
         Senha temporaria
