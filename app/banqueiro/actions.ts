@@ -257,7 +257,7 @@ export async function atualizarTpaStatus(
     .eq("id", accountId);
   if (error) return { error: error.message };
 
-  // 2. Se marcou como entregue, notificar o líder
+  // 2. Se marcou como entregue, criar notificações
   if (status === "entregue") {
     try {
       const adminClient = await getAdminClient();
@@ -276,27 +276,40 @@ export async function atualizarTpaStatus(
         // Buscar perfil do banqueiro (nome e leader_id)
         const { data: profile } = await adminClient
           .from("profiles")
-          .select("nome, leader_id")
+          .select("id, nome, leader_id")
           .eq("id", auth.user.id)
           .single();
 
+        const banqueiroNome = profile?.nome ?? "Bankeiro";
+        const baseNotif = {
+          leader_id: auth.user.id,
+          cliente_nome: clienteNome,
+          cliente_id: clienteId,
+          conta_id: accountId,
+          tipo: "tpa_entregue" as const,
+          leader_nome: banqueiroNome,
+          mensagem: `TPA entregue — ${clienteNome}`,
+          descricao: `O bankeiro ${banqueiroNome} marcou o TPA como entregue para a cliente ${clienteNome}.`,
+          lida: false,
+        };
+
+        // Notificação #1: para o líder (se existir)
         if (profile?.leader_id) {
-          // Criar notificação para o líder
           await adminClient.from("notifications").insert({
-            leader_id: auth.user.id,
+            ...baseNotif,
             banqueiro_id: profile.leader_id,
-            cliente_nome: clienteNome,
-            cliente_id: clienteId,
-            conta_id: accountId,
-            tipo: "tpa_entregue",
-            leader_nome: profile.nome ?? "Bankeiro",
-            mensagem: `TPA entregue — ${clienteNome}`,
-            descricao: `O bankeiro ${profile.nome} marcou o TPA como entregue para a cliente ${clienteNome}.`,
-            lida: false,
           }).then(({ error: notifErr }) => {
             if (notifErr) console.error("Erro ao notificar líder:", notifErr);
           });
         }
+
+        // Notificação #2: para o próprio bankeiro (visível ao admin via service_role)
+        await adminClient.from("notifications").insert({
+          ...baseNotif,
+          banqueiro_id: auth.user.id,
+        }).then(({ error: notifErr }) => {
+          if (notifErr) console.error("Erro ao criar notificação de TPA entregue:", notifErr);
+        });
       }
     } catch (e) {
       console.error("Erro ao criar notificação de TPA entregue:", e);
