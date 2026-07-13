@@ -181,6 +181,18 @@ export async function editarCliente(formData: FormData) {
   if (!clienteId) return { error: "ID do cliente é obrigatório." };
   if (!nome)      return { error: "O nome é obrigatório." };
 
+  // Verificar ownership: o cliente só pode ser editado se tiver contas deste bankeiro
+  const { data: contaDono, error: donoError } = await supabase
+    .from("accounts")
+    .select("id")
+    .eq("cliente_id", clienteId)
+    .eq("banqueiro_id", auth.user.id)
+    .limit(1);
+
+  if (donoError) return { error: "Erro ao verificar permissões: " + donoError.message };
+  if (!contaDono || contaDono.length === 0)
+    return { error: "Este cliente não está associado a nenhuma das suas contas. Não pode editar." };
+
   const { error } = await supabase
     .from("clientes")
     .update({ nome, bi, telefone, endereco, bi_emissao: biEmissao, bi_validade: biValidade })

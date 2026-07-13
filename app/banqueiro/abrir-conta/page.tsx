@@ -174,7 +174,7 @@ export default function AbrirConta() {
         .from("clientes")
         .select("id")
         .eq("bi", formData.bi)
-        .single();
+        .maybeSingle();
 
       const clientePayload = {
         nome: formData.nome,
