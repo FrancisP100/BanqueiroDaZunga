@@ -1,21 +1,24 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createBrowserClient } from '@/lib/supabase/client';
-import { LayoutDashboard, Users, UserCheck, Store, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Users, UserCheck, Store, Bell, LogOut, Menu, X } from 'lucide-react';
 import { BciLogo } from '@/components/ui/bci-logo';
+import { getAllNotifications } from '@/app/admin/actions';
 
 const navItems = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { name: 'Bankeiros', href: '/admin/banqueiros', icon: Users },
   { name: 'Líderes', href: '/admin/chefes', icon: UserCheck },
   { name: 'Mercados', href: '/admin/mercados', icon: Store },
+  { name: 'Notificações', href: '/admin/notificacoes', icon: Bell },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [notifCount, setNotifCount] = useState(0);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -23,6 +26,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
+
+  useEffect(() => {
+    async function loadNotifCount() {
+      const res = await getAllNotifications();
+      if (res.data) {
+        setNotifCount(res.data.filter((n: any) => !n.lida).length);
+      }
+    }
+    loadNotifCount();
+
+    const interval = setInterval(loadNotifCount, 30000);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -66,7 +83,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 }`}
               >
                 <Icon size={18} className="mr-3 flex-shrink-0" />
-                {item.name}
+                <span className="flex-1">{item.name}</span>
+                {item.name === 'Notificações' && notifCount > 0 && (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-bci-magenta px-1.5 text-[10px] font-extrabold text-white">
+                    {notifCount}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -111,7 +133,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   }`}
                 >
                   <Icon size={18} className="mr-3" />
-                  {item.name}
+                  <span className="flex-1">{item.name}</span>
+                  {item.name === 'Notificações' && notifCount > 0 && (
+                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-bci-magenta px-1.5 text-[10px] font-extrabold text-white">
+                      {notifCount}
+                    </span>
+                  )}
                 </Link>
               );
             })}

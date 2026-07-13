@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -18,6 +18,7 @@ const navItems = [
 
 export default function ChefeLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [notifCount, setNotifCount] = useState(0);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -25,6 +26,25 @@ export default function ChefeLayout({ children }: { children: React.ReactNode })
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
+
+  useEffect(() => {
+    async function loadNotifCount() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { count } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('banqueiro_id', user.id)
+        .eq('lida', false);
+      setNotifCount(count ?? 0);
+    }
+    loadNotifCount();
+
+    // Poll a cada 30 segundos
+    const interval = setInterval(loadNotifCount, 30000);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -70,7 +90,12 @@ export default function ChefeLayout({ children }: { children: React.ReactNode })
                 }`}
               >
                 <Icon size={18} className="mr-3 flex-shrink-0" />
-                {item.name}
+                <span className="flex-1">{item.name}</span>
+                {item.name === 'Notificações' && notifCount > 0 && (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-bci-magenta px-1.5 text-[10px] font-extrabold text-white">
+                    {notifCount}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -116,7 +141,12 @@ export default function ChefeLayout({ children }: { children: React.ReactNode })
                   }`}
                 >
                   <Icon size={18} className="mr-3" />
-                  {item.name}
+                  <span className="flex-1">{item.name}</span>
+                  {item.name === 'Notificações' && notifCount > 0 && (
+                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-bci-magenta px-1.5 text-[10px] font-extrabold text-white">
+                      {notifCount}
+                    </span>
+                  )}
                 </Link>
               );
             })}

@@ -331,6 +331,56 @@ export async function updatePunctualityRule(formData: FormData) {
   revalidatePath("/chefe");
 }
 
+// ─── Admin Notifications ───
+
+/** Fetch all notifications for the admin page */
+export async function getAllNotifications(): Promise<{ data?: any[]; error?: string }> {
+  if (!hasSupabaseEnv()) return { error: "Supabase não configurado" };
+
+  const adminClient = await getAdminClient();
+
+  const { data, error } = await adminClient
+    .from("notifications")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+  if (error) return { error: "Erro ao carregar notificações: " + error.message };
+  return { data: data ?? [] };
+}
+
+/** Mark a specific notification as read (admin bypasses RLS) */
+export async function adminMarcarNotificacaoLida(
+  notificationId: string,
+): Promise<{ error?: string }> {
+  if (!hasSupabaseEnv()) return { error: "Supabase não configurado" };
+
+  const adminClient = await getAdminClient();
+
+  const { error } = await adminClient
+    .from("notifications")
+    .update({ lida: true })
+    .eq("id", notificationId);
+
+  if (error) return { error: "Erro ao marcar notificação: " + error.message };
+  return {};
+}
+
+/** Mark all notifications as read (admin bypasses RLS) */
+export async function adminMarcarTodasLidas(): Promise<{ error?: string }> {
+  if (!hasSupabaseEnv()) return { error: "Supabase não configurado" };
+
+  const adminClient = await getAdminClient();
+
+  const { error } = await adminClient
+    .from("notifications")
+    .update({ lida: true })
+    .eq("lida", false);
+
+  if (error) return { error: "Erro ao marcar notificações: " + error.message };
+  return {};
+}
+
 // ─── Helpers de sincronização Líder-Banqueiro ───
 
 /**
