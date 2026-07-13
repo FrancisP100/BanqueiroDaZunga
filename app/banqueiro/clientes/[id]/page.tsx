@@ -299,11 +299,20 @@ export default function InspecionarCliente() {
                       <button
                         disabled={isPending}
                         onClick={() => handleTpaToggle(conta.id, conta.tpa_status)}
-                        className={`text-xs font-bold px-2 py-1 rounded-full ${
-                          conta.tpa_status === "entregue" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                        className={`group text-xs font-bold px-2 py-1 rounded-full transition-all duration-300 ease-in-out ${
+                          conta.tpa_status === "entregue"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-amber-100 text-amber-700 hover:bg-emerald-100 hover:text-emerald-700"
                         }`}
                       >
-                        {conta.tpa_status === "entregue" ? "Entregue ✓" : "Pendente"}
+                        {conta.tpa_status === "entregue" ? (
+                          "Entregue ✓"
+                        ) : (
+                          <span className="relative">
+                            <span className="group-hover:opacity-0 transition-opacity duration-300">Pendente</span>
+                            <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">Entregar</span>
+                          </span>
+                        )}
                       </button>
                     </td>
                     <td className="px-4 py-3">
