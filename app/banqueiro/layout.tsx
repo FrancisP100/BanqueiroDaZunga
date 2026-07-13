@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createBrowserClient } from '@/lib/supabase/client';
-import { LayoutDashboard, Users, UserPlus, Bell, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Users, UserPlus, Bell, User, LogOut, Menu, X } from 'lucide-react';
 import { BciLogo } from '@/components/ui/bci-logo';
 
 export default function BanqueiroLayout({
@@ -57,6 +57,7 @@ export default function BanqueiroLayout({
     { name: 'Dashboard', href: '/banqueiro', icon: LayoutDashboard },
     { name: 'Abrir Conta', href: '/banqueiro/abrir-conta', icon: UserPlus },
     { name: 'Meus Clientes', href: '/banqueiro/clientes', icon: Users },
+    { name: 'Perfil', href: '/banqueiro/perfil', icon: User },
   ];
 
 

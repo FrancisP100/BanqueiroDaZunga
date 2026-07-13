@@ -26,7 +26,7 @@ export async function createAccount(formData: FormData) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, local_id")
+    .select("id, local_id, leader_id")
     .eq("id", auth.user.id)
     .single();
   if (!profile) return;
@@ -91,20 +91,35 @@ export async function createAccount(formData: FormData) {
     hora_abertura: agora.toTimeString().slice(0, 8),
   }).select("id").single();
 
-  // 3. Criar notificação de abertura de conta para o banqueiro
+  // 3. Criar notificações de abertura de conta
   if (newAccount) {
     const adminClient = await getAdminClient();
-    await adminClient.from("notifications").insert({
+    const baseNotif = {
       leader_id: profile.id,
-      banqueiro_id: profile.id,
       cliente_nome: nome,
       cliente_id: clienteId,
       conta_id: newAccount.id,
-      tipo: "abertura_conta",
+      tipo: "abertura_conta" as const,
       leader_nome: "Sistema",
       mensagem: `Conta aberta para ${nome} — classe ${pacote}.`,
       descricao: `Registo de nova conta para a cliente ${nome}. Classe: ${pacote}. O TPA está pendente — entregue o terminal e actualize o estado no sistema.`,
       lida: false,
+    };
+
+    // Notificação #1: para o líder do balcão (se existir)
+    if (profile.leader_id) {
+      await adminClient.from("notifications").insert({
+        ...baseNotif,
+        banqueiro_id: profile.leader_id,
+      }).then(({ error: notifErr }) => {
+        if (notifErr) console.error("Erro ao notificar líder sobre abertura:", notifErr);
+      });
+    }
+
+    // Notificação #2: para o próprio bankeiro
+    await adminClient.from("notifications").insert({
+      ...baseNotif,
+      banqueiro_id: profile.id,
     }).then(({ error: notifErr }) => {
       if (notifErr) console.error("Erro ao criar notificação de abertura:", notifErr);
     });
