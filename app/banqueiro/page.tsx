@@ -5,6 +5,7 @@ import { createBrowserClient } from '@/lib/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { distanceInMeters } from "@/lib/attendance";
+import { toast } from "sonner";
 import {
   MapPin,
   CheckCircle2,
@@ -237,13 +238,13 @@ export default function BanqueiroDashboard() {
           const msg = isPrimeiraPresenca
             ? "🎯 Primeira presença registada! Coordenadas do mercado guardadas com sucesso."
             : "Presença marcada com sucesso!";
-          alert(msg);
+          toast.success(msg);
           window.location.reload();
-        } else alert("Erro ao marcar presença.");
+        } else toast.error("Erro ao marcar presença.");
         setSubmitting(false);
       },
       () => {
-        alert("Não foi possível obter a sua localização.");
+        toast.error("Não foi possível obter a sua localização.");
         setSubmitting(false);
       },
     );

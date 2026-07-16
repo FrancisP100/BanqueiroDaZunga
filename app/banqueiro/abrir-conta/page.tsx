@@ -23,6 +23,31 @@ import {
 import { PACOTES } from "@/lib/types";
 import { registry } from "@/lib/integrations/registry";
 import { Cpu } from "lucide-react";
+import { z } from "zod";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+
+const formSchema = z.object({
+  nome: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
+  bi: z.string().min(5, "BI inválido"),
+  biEmissao: z.string().optional(),
+  biValidade: z.string().optional(),
+  telefone: z.string().min(9, "Telefone inválido"),
+  endereco: z.string().optional(),
+  pacote: z.string().min(1, "Selecione uma classe"),
+});
+
+type FormValues = z.infer<typeof formSchema>;
 
 export default function AbrirConta() {
   const [loading, setLoading] = useState(false);
@@ -33,6 +58,19 @@ export default function AbrirConta() {
   });
   const router = useRouter();
 
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      nome: "",
+      bi: "",
+      biEmissao: "",
+      biValidade: "",
+      telefone: "",
+      endereco: "",
+      pacote: PACOTES[0] as string,
+    },
+  });
+
   // Verificar integrações disponíveis ao montar o componente
   useEffect(() => {
     let ignore = false;
@@ -41,30 +79,15 @@ export default function AbrirConta() {
       documentStorage: registry.getDocumentStorage() !== null,
       banking: registry.getBankingIntegration() !== null,
     };
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIntegrations(integrations);
     return () => { ignore = true; };
   }, []);
-
-  const [formData, setFormData] = useState({
-    nome: "",
-    bi: "",
-    biEmissao: "",
-    biValidade: "",
-    telefone: "",
-    endereco: "",
-    pacote: PACOTES[0] as string,
-  });
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   );
 
-  /**
-   * Valida o BI usando o registry (se disponível).
-   * Se não houver validador activo, retorna null (comportamento actual).
-   */
   const validateBiWithIntegrations = async (
     biNumber: string,
   ): Promise<{ nome?: string; endereco?: string } | null> => {
@@ -78,14 +101,9 @@ export default function AbrirConta() {
         endereco: result.data.endereco,
       };
     }
-    // Se falhar mas tiver fallback, o sistema continua manualmente
     return null;
   };
 
-  /**
-   * Se houver integração bancária activa, submete o processo ao banco.
-   * Caso contrário, mantém o comportamento actual (criação local).
-   */
   const submitToBankingIntegration = async (
     accountData: {
       nome: string;
@@ -115,25 +133,19 @@ export default function AbrirConta() {
     return { submitted: result.success };
   };
 
-  /**
-   * Lida com o blur do campo BI: se houver validador activo,
-   * tenta preencher automaticamente nome e endereço.
-   */
-  const handleBiBlur = async () => {
-    if (!formData.bi || formData.bi.length < 5) return;
+  const handleBiBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
+    const biValue = e.target.value;
+    if (!biValue || biValue.length < 5) return;
 
-    const data = await validateBiWithIntegrations(formData.bi);
+    const data = await validateBiWithIntegrations(biValue);
     if (data?.nome) {
-      setFormData((prev) => ({
-        ...prev,
-        nome: prev.nome || data.nome || "",
-        endereco: prev.endereco || data.endereco || "",
-      }));
+      form.setValue("nome", form.getValues("nome") || data.nome || "");
+      form.setValue("endereco", form.getValues("endereco") || data.endereco || "");
+      toast.success("Dados preenchidos via validador de BI!");
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (values: FormValues) => {
     setLoading(true);
 
     try {
@@ -149,39 +161,37 @@ export default function AbrirConta() {
         .single();
       if (!profile) throw new Error("Perfil não encontrado");
 
-      // ─ Integração Bancária (se activa) ─
+      // Integração Bancária (se activa)
       const bankingResult = await submitToBankingIntegration({
-        nome: formData.nome,
-        bi: formData.bi,
-        telefone: formData.telefone,
-        endereco: formData.endereco,
-        pacote: formData.pacote,
+        nome: values.nome,
+        bi: values.bi,
+        telefone: values.telefone,
+        endereco: values.endereco || "",
+        pacote: values.pacote,
         banqueiroCodigo: profile.codigo_interno,
         balcao: profile.local_id ?? "",
       });
 
       if (bankingResult.submitted) {
-        // A integração tratou do registo; não precisamos criar localmente
-        alert("Conta registada com sucesso através do sistema bancário!");
+        toast.success("Conta registada com sucesso através do sistema bancário!");
         router.push("/banqueiro/clientes");
         return;
       }
 
-      // ─ Fallback: fluxo manual actual ─
-      // Cliente (upsert por BI)
+      // Fallback: fluxo manual
       let clienteId: string;
       const { data: existingClient } = await supabase
         .from("clientes")
         .select("id")
-        .eq("bi", formData.bi)
+        .eq("bi", values.bi)
         .maybeSingle();
 
       const clientePayload = {
-        nome: formData.nome,
-        telefone: formData.telefone,
-        endereco: formData.endereco,
-        bi_emissao: formData.biEmissao || null,
-        bi_validade: formData.biValidade || null,
+        nome: values.nome,
+        telefone: values.telefone,
+        endereco: values.endereco || null,
+        bi_emissao: values.biEmissao || null,
+        bi_validade: values.biValidade || null,
       };
 
       if (existingClient) {
@@ -193,19 +203,18 @@ export default function AbrirConta() {
       } else {
         const { data: newClient, error: clientError } = await supabase
           .from("clientes")
-          .insert({ bi: formData.bi, ...clientePayload })
+          .insert({ bi: values.bi, ...clientePayload })
           .select("id")
           .single();
         if (clientError) throw clientError;
         clienteId = newClient.id;
       }
 
-      // Conta entra sempre como pendente, com hora de abertura
       const agora = new Date();
       const { error: accountError } = await supabase.from("accounts").insert({
         banqueiro_id: profile.id,
         cliente_id: clienteId,
-        pacote: formData.pacote,
+        pacote: values.pacote,
         mercado_id: profile.local_id,
         tpa_status: "pendente",
         status: "pendente",
@@ -213,23 +222,19 @@ export default function AbrirConta() {
       });
       if (accountError) throw accountError;
 
-      alert(
-        "Conta registada como pendente! Active-a no painel de Clientes quando estiver pronta.",
-      );
+      toast.success("Conta registada como pendente! Active-a no painel de Clientes.");
       router.push("/banqueiro/clientes");
     } catch (error: any) {
-      alert("Erro ao abrir conta: " + error.message);
+      toast.error("Erro ao abrir conta: " + error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // Determina se alguma integração está activa
   const hasActiveIntegrations = Object.values(integrations).some(Boolean);
 
   return (
     <div className="max-w-2xl mx-auto">
-      {/* Banner informativo quando há integrações activas */}
       {hasActiveIntegrations && (
         <div className="mb-4 bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-start gap-3">
           <Cpu size={20} className="text-emerald-600 shrink-0 mt-0.5" />
@@ -255,119 +260,147 @@ export default function AbrirConta() {
       <Card>
         <CardHeader className="bg-bci-dark text-white rounded-t-xl">
           <CardTitle className="text-2xl">Abrir Nova Conta</CardTitle>
-          <CardDescription className="text-white/80">              A conta é criada como <b>pendente</b> — active-a depois em &quot;Meus
-            Clientes&quot;
+          <CardDescription className="text-white/80">
+            A conta é criada como <b>pendente</b> — active-a depois em &quot;Meus Clientes&quot;
           </CardDescription>
         </CardHeader>
         <CardContent className="p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold border-b pb-2">
-                Dados do Cliente
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="nome">Nome Completo</Label>
-                  <Input
-                    id="nome"
-                    required
-                    value={formData.nome}
-                    onChange={(e) =>
-                      setFormData({ ...formData, nome: e.target.value })
-                    }
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold border-b pb-2">
+                  Dados do Cliente
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="nome"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nome Completo</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Nome completo" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
+
+                  <FormField
+                    control={form.control}
+                    name="bi"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Número do BI</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Ex: 000000000LA000" 
+                            {...field} 
+                            onBlur={(e) => {
+                              field.onBlur();
+                              handleBiBlur(e);
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                        {integrations.biValidator && (
+                          <FormDescription className="text-[11px] text-emerald-600 flex items-center gap-1">
+                            <Cpu size={10} />
+                            Validação automática ao sair deste campo
+                          </FormDescription>
+                        )}
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="biEmissao"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Data de Emissão do BI</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="biValidade"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Data de Validade do BI</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="md:col-span-2">
+                    <FormField
+                      control={form.control}
+                      name="telefone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Telefone</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ex.: 923 123 456" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="bi">Número do BI</Label>
-                  <Input
-                    id="bi"
-                    required
-                    value={formData.bi}
-                    onChange={(e) =>
-                      setFormData({ ...formData, bi: e.target.value })
-                    }
-                    onBlur={handleBiBlur}
-                  />
-                  {integrations.biValidator && (
-                    <p className="text-[11px] text-emerald-600 flex items-center gap-1">
-                      <Cpu size={10} />
-                      Validação automática ao sair deste campo
-                    </p>
+              </div>
+
+              <div className="space-y-4 pt-4">
+                <h3 className="text-lg font-semibold border-b pb-2">Classes</h3>
+                <FormField
+                  control={form.control}
+                  name="pacote"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Classe</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione uma classe" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {PACOTES.map((p) => (
+                            <SelectItem key={p} value={p}>
+                              {p}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        O TPA fica automaticamente como <b>pendente</b> — pode alterá-lo para &quot;entregue&quot; depois, no painel de Clientes.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="biEmissao">Data de Emissão do BI</Label>
-                  <Input
-                    id="biEmissao"
-                    type="date"
-                    value={formData.biEmissao}
-                    onChange={(e) =>
-                      setFormData({ ...formData, biEmissao: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="biValidade">Data de Validade do BI</Label>
-                  <Input
-                    id="biValidade"
-                    type="date"
-                    value={formData.biValidade}
-                    onChange={(e) =>
-                      setFormData({ ...formData, biValidade: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="telefone">Telefone</Label>
-                  <Input
-                    id="telefone"
-                    required
-                    value={formData.telefone}
-                    onChange={(e) =>
-                      setFormData({ ...formData, telefone: e.target.value })
-                    }
-                    placeholder="Ex.: 923 123 456"
-                  />
-                </div>
+                />
               </div>
-            </div>
 
-            <div className="space-y-4 pt-4">
-              <h3 className="text-lg font-semibold border-b pb-2">Classes</h3>
-              <div className="space-y-2">
-                <Label htmlFor="pacote">Classe</Label>
-                <Select
-                  value={formData.pacote}
-                  onValueChange={(val) =>
-                    setFormData({ ...formData, pacote: val || formData.pacote })
-                  }
+              <div className="pt-6">
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-bci-magenta hover:bg-bci-magenta/90 text-white py-6 text-lg"
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma classe" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PACOTES.map((p) => (
-                      <SelectItem key={p} value={p}>
-                        {p}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  {loading ? "A processar..." : "Registar Conta (Pendente)"}
+                </Button>
               </div>
-              <p className="text-sm text-gray-500">
-                O TPA fica automaticamente como <b>pendente</b> — pode alterá-lo                para &quot;entregue&quot; depois, no painel de Clientes.</p>
-            </div>
-
-            <div className="pt-6">
-              <Button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-bci-magenta hover:bg-bci-magenta/90 text-white py-6 text-lg"
-              >
-                {loading ? "A processar..." : "Registar Conta (Pendente)"}
-              </Button>
-            </div>
-          </form>
+            </form>
+          </Form>
         </CardContent>
       </Card>
     </div>
