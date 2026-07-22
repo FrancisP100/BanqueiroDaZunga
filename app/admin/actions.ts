@@ -462,6 +462,113 @@ export async function adminMarcarTodasLidas(): Promise<{ error?: string }> {
   return {};
 }
 
+// ─── Administração de Clientes ───
+
+/** Get all clients with their accounts for the admin page */
+export async function getAllClientes(): Promise<{ data?: any[]; error?: string }> {
+  if (!hasSupabaseEnv()) return { error: "Supabase não configurado" };
+
+  const adminClient = await getAdminClient();
+
+  const { data, error } = await adminClient
+    .from("clientes")
+    .select("*, accounts(*, markets(nome), profiles(nome))")
+    .order("nome");
+
+  if (error) return { error: "Erro ao carregar clientes: " + error.message };
+  return { data: data ?? [] };
+}
+
+/** Update a client's data (admin bypasses all restrictions) */
+export async function adminEditarCliente(formData: FormData): Promise<{ error?: string }> {
+  if (!hasSupabaseEnv()) return { error: "Supabase não configurado" };
+
+  const clienteId = String(formData.get("cliente_id") ?? "").trim();
+  const nome      = String(formData.get("nome")       ?? "").trim();
+  const bi        = String(formData.get("bi")         ?? "").trim();
+  const telefone  = String(formData.get("telefone")   ?? "").trim();
+  const endereco  = String(formData.get("endereco")   ?? "").trim();
+  const biEmissao = String(formData.get("bi_emissao") ?? "").trim() || null;
+  const biValidade= String(formData.get("bi_validade")?? "").trim() || null;
+
+  if (!clienteId) return { error: "ID do cliente é obrigatório." };
+  if (!nome)      return { error: "O nome é obrigatório." };
+
+  const adminClient = await getAdminClient();
+
+  const { error } = await adminClient
+    .from("clientes")
+    .update({ nome, bi, telefone, endereco, bi_emissao: biEmissao, bi_validade: biValidade })
+    .eq("id", clienteId);
+
+  if (error) return { error: "Erro ao actualizar cliente: " + error.message };
+
+  revalidatePath("/admin/clientes");
+  return {};
+}
+
+/** Delete a client and all their accounts (admin bypasses RLS) */
+export async function adminEliminarCliente(clienteId: string): Promise<{ error?: string }> {
+  if (!hasSupabaseEnv()) return { error: "Supabase não configurado" };
+
+  const adminClient = await getAdminClient();
+
+  // 1. Remove associated notifications
+  await adminClient.from("notifications").delete().eq("cliente_id", clienteId).then(
+    (result: any) => { if (result?.error) console.error("Erro ao limpar notificações:", result.error); }
+  );
+
+  // 2. Delete accounts
+  const { data: contas } = await adminClient.from("accounts").select("id").eq("cliente_id", clienteId);
+  if (contas && contas.length > 0) {
+    const contaIds = contas.map((c: any) => c.id);
+    await adminClient.from("notifications").delete().in("conta_id", contaIds).then(
+      (result: any) => { if (result?.error) console.error("Erro ao limpar notifs das contas:", result.error); }
+    );
+    await adminClient.from("accounts").delete().eq("cliente_id", clienteId);
+  }
+
+  // 3. Delete the client
+  const { error } = await adminClient.from("clientes").delete().eq("id", clienteId);
+  if (error) return { error: "Erro ao eliminar cliente: " + error.message };
+
+  revalidatePath("/admin/clientes");
+  return {};
+}
+
+/** Admin creates a new account for a client */
+export async function adminCriarConta(formData: FormData): Promise<{ error?: string }> {
+  if (!hasSupabaseEnv()) return { error: "Supabase não configurado" };
+
+  const clienteId = String(formData.get("cliente_id") ?? "").trim();
+  const banqueiroId = String(formData.get("banqueiro_id") ?? "").trim();
+  const pacote  = String(formData.get("pacote")  ?? "").trim();
+  const mercadoId = String(formData.get("mercado_id") ?? "").trim();
+
+  if (!clienteId)  return { error: "Cliente é obrigatório." };
+  if (!banqueiroId) return { error: "Bankeiro responsável é obrigatório." };
+  if (!pacote)     return { error: "Classe é obrigatória." };
+  if (!mercadoId)  return { error: "Mercado é obrigatório." };
+
+  const adminClient = await getAdminClient();
+
+  const agora = new Date();
+  const { error } = await adminClient.from("accounts").insert({
+    banqueiro_id: banqueiroId,
+    cliente_id: clienteId,
+    pacote,
+    mercado_id: mercadoId,
+    status: "pendente",
+    tpa_status: "pendente",
+    hora_abertura: agora.toTimeString().slice(0, 8),
+  });
+
+  if (error) return { error: "Erro ao criar conta: " + error.message };
+
+  revalidatePath("/admin/clientes");
+  return {};
+}
+
 // ─── Helpers de sincronização Líder-Banqueiro ───
 
 /**

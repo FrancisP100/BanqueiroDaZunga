@@ -5,6 +5,8 @@ import Link from "next/link";
 import { ChevronDown, ChevronUp, Bell, UserPlus, ExternalLink, CheckCheck } from "lucide-react";
 import { Notification } from "@/lib/types";
 
+import { KeyRound, Smartphone } from "lucide-react";
+
 const TIPO_CONFIG = {
   alerta_tpa: {
     label: "Alerta de TPA",
@@ -25,6 +27,22 @@ const TIPO_CONFIG = {
   tpa_entregue: {
     label: "TPA Entregue",
     icon: CheckCheck,
+    color: "text-blue-600",
+    bgColor: "bg-blue-50",
+    borderColor: "border-blue-200",
+    dotColor: "bg-blue-400",
+  },
+  conta_ativada: {
+    label: "Conta Activada",
+    icon: KeyRound,
+    color: "text-emerald-600",
+    bgColor: "bg-emerald-50",
+    borderColor: "border-emerald-200",
+    dotColor: "bg-emerald-400",
+  },
+  tpa_no_balcao: {
+    label: "TPA no Balcão",
+    icon: Smartphone,
     color: "text-blue-600",
     bgColor: "bg-blue-50",
     borderColor: "border-blue-200",

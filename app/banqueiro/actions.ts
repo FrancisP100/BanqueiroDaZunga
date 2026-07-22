@@ -295,7 +295,7 @@ export async function eliminarConta(accountId: string) {
 /** Banqueiro actualiza o estado do TPA e notifica o líder */
 export async function atualizarTpaStatus(
   accountId: string,
-  status: "pendente" | "entregue",
+  status: "pendente" | "entregue" | "no_balcao",
 ) {
   if (!hasSupabaseEnv()) return { error: "Supabase não configurado" };
 

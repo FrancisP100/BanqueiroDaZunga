@@ -66,6 +66,8 @@ export async function getMvpData() {
     pacote: row.pacote,
     pacoteStatus: row.pacote_status ?? "ativo",
     tpaStatus: row.tpa_status ?? "sem_tpa",
+    numeroContaBanco: row.numero_conta_banco ?? undefined,
+    dataActivacaoBanco: row.data_activacao_banco ?? undefined,
     mercadoId: row.mercado_id,
     mercadoNome: row.markets?.nome ?? "",
     status: row.status

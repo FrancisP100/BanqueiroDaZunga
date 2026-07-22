@@ -36,7 +36,7 @@ export type ClassePacote = (typeof CLASSES_PACOTE)[number];
 export const PACOTES = CLASSES_PACOTE;
 export type Pacote = ClassePacote;
 
-export type TpaStatus = "pendente" | "entregue" | "sem_tpa" | "por_entregar";
+export type TpaStatus = "pendente" | "entregue" | "sem_tpa" | "por_entregar" | "no_balcao";
 
 export type Account = {
   id: string;
@@ -59,6 +59,8 @@ export type Account = {
   mercadoId: string;
   mercadoNome: string;
   status: "aberta" | "pendente";
+  numeroContaBanco?: string;
+  dataActivacaoBanco?: string;
 };
 
 export type PresenceStatus = "no_local" | "fora_do_local" | "falta";
@@ -88,7 +90,7 @@ export type PunctualityRule = {
   toleranciaMin: number;
 };
 
-export type NotificationType = "alerta_tpa" | "abertura_conta" | "tpa_entregue";
+export type NotificationType = "alerta_tpa" | "abertura_conta" | "tpa_entregue" | "conta_ativada" | "tpa_no_balcao";
 
 export type Notification = {
   id: string;

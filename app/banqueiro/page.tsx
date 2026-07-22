@@ -16,6 +16,7 @@ import {
   Bell,
   BellOff,
   CheckCheck,
+  Smartphone,
 } from "lucide-react";
 import NotificationCard from "@/components/notification-card";
 import { marcarNotificacaoLida, marcarTodasLidas } from "@/app/banqueiro/actions";
@@ -54,6 +55,7 @@ export default function BanqueiroDashboard() {
     totalPacotes: 0,
     tpaEntregues: 0,
     tpaPendentes: 0,
+    tpaNoBalcao: 0,
   });
   const [presencaHoje, setPresencaHoje] = useState<any>(null);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(
@@ -113,6 +115,8 @@ export default function BanqueiroDashboard() {
           tpaEntregues: accounts.filter((a) => a.tpa_status === "entregue")
             .length,
           tpaPendentes: accounts.filter((a) => a.tpa_status === "pendente")
+            .length,
+          tpaNoBalcao: accounts.filter((a) => a.tpa_status === "no_balcao")
             .length,
         });
       }
@@ -276,8 +280,7 @@ export default function BanqueiroDashboard() {
         contasAbertas: lista.filter((a: any) => a.status === "aberta").length,
         contasPendentes: lista.filter((a: any) => a.status === "pendente").length,
         contasTotal: lista.length,
-        tpaEntregues: lista.filter((a: any) => a.tpa_status === "entregue").length,
-        tpaPendentes: lista.filter((a: any) => a.tpa_status === "pendente").length,
+        tpaEntregues: lista.filter((a: any) => a.tpa_status === "entregue").length,          tpaPendentes: lista.filter((a: any) => a.tpa_status === "pendente" || a.tpa_status === "no_balcao").length,
         clientesUnicos: clientesSet.size,
         pacotesPorTipo: Object.entries(pacoteCount).map(([nome, valor]) => ({ nome, valor })),
       });
@@ -414,7 +417,35 @@ export default function BanqueiroDashboard() {
           <h1 className="text-3xl font-bold text-bci-dark">Dashboard</h1>
           <p className="text-gray-500">Resumo da sua atividade de hoje</p>
         </div>
-        {presencaHoje ? (
+        {/* Alerta de TPAs no balcão */}
+      {stats.tpaNoBalcao > 0 && (
+        <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 sm:p-5 shadow-card">
+          <div className="flex items-start gap-3">
+            <div className="shrink-0 mt-0.5 h-10 w-10 rounded-xl bg-blue-100 flex items-center justify-center">
+              <Smartphone size={20} className="text-blue-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-extrabold text-blue-800">
+                TPA{stats.tpaNoBalcao > 1 ? "s" : ""} no Balcão — Acção Necessária
+              </p>
+              <p className="text-sm text-blue-700 mt-1">
+                <strong>{stats.tpaNoBalcao}</strong> cliente{stats.tpaNoBalcao > 1 ? "s" : ""} com TPA{stats.tpaNoBalcao > 1 ? "s" : ""} disponíve{stats.tpaNoBalcao > 1 ? "is" : "l"} no balcão. Confirme a entrega ao cliente no painel de Clientes.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <a
+                  href="/banqueiro/clientes"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-extrabold text-white hover:bg-blue-700 transition-colors"
+                >
+                  <CheckCircle2 size={14} />
+                  Ir para Clientes
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {presencaHoje ? (
           <div className="flex flex-wrap gap-2">
             <div className="bg-green-100 text-green-800 px-4 py-2 rounded-lg flex items-center font-medium">
               <CheckCircle2 className="mr-2" size={20} />
@@ -602,6 +633,7 @@ export default function BanqueiroDashboard() {
                   { label: "Total Contas", value: reportData.contasTotal, color: "bg-blue-100 text-blue-600" },
                   { label: "TPA Entregues", value: reportData.tpaEntregues, color: "bg-emerald-100 text-emerald-600" },
                   { label: "TPA Pendentes", value: reportData.tpaPendentes, color: "bg-orange-100 text-orange-600" },
+              { label: "No Balcão", value: stats.tpaNoBalcao, color: "bg-blue-100 text-blue-600" },
                   { label: "Clientes", value: reportData.clientesUnicos, color: "bg-purple-100 text-purple-600" },
                 ].map(({ label, value, color }) => (
                   <div key={label} className="rounded-xl border border-bci-line bg-gray-50/50 p-3 text-center">
@@ -705,11 +737,9 @@ export default function BanqueiroDashboard() {
                               </span>
                             </td>
                             <td className="px-3 py-2.5">
-                              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-                                a.tpa_status === "entregue" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-                              }`}>
-                                {a.tpa_status}
-                              </span>
+                              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold $                                {a.tpa_status === "entregue" ? "bg-emerald-100 text-emerald-700" : a.tpa_status === "no_balcao" ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"}`}>
+                              {a.tpa_status === "no_balcao" ? "No Balcão" : a.tpa_status}
+                            </span>
                             </td>
                             <td className="px-3 py-2.5 text-gray-500 whitespace-nowrap">
                               {new Date(a.created_at).toLocaleDateString()}

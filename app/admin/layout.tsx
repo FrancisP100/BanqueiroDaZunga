@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createBrowserClient } from '@/lib/supabase/client';
-import { LayoutDashboard, Users, UserCheck, Store, Bell, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Users, UserCheck, Store, Bell, LogOut, Menu, X, ContactRound } from 'lucide-react';
 import { BciLogo } from '@/components/ui/bci-logo';
 import { getAllNotifications } from '@/app/admin/actions';
 
@@ -12,6 +12,7 @@ const navItems = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { name: 'Bankeiros', href: '/admin/banqueiros', icon: Users },
   { name: 'Líderes', href: '/admin/chefes', icon: UserCheck },
+  { name: 'Clientes', href: '/admin/clientes', icon: ContactRound },
   { name: 'Mercados', href: '/admin/mercados', icon: Store },
   { name: 'Notificações', href: '/admin/notificacoes', icon: Bell },
 ];

@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { createBrowserClient } from '@/lib/supabase/client';
 import {
   ArrowLeft, UserCircle, CreditCard, Phone, MapPin, Calendar,
-  CheckCircle2, Pencil, Trash2, X, Save
+  CheckCircle2, Pencil, Trash2, X, Save, Smartphone, CheckCheck
 } from "lucide-react";
 import {
   Dialog,
@@ -124,8 +124,15 @@ export default function InspecionarCliente() {
   async function handleTpaToggle(contaId: string, currentStatus: string) {
     setPending(true);
     try {
-      const newStatus = currentStatus === "entregue" ? "pendente" : "entregue";
-      const result = await atualizarTpaStatus(contaId, newStatus as "pendente" | "entregue");
+      let newStatus: "pendente" | "entregue" | "no_balcao";
+      if (currentStatus === "entregue") {
+        newStatus = "pendente";
+      } else if (currentStatus === "no_balcao") {
+        newStatus = "entregue";
+      } else {
+        newStatus = "entregue";
+      }
+      const result = await atualizarTpaStatus(contaId, newStatus);
       if (result.error) { alert(result.error); return; }
       await loadDataSilent();
     } finally {
@@ -302,11 +309,24 @@ export default function InspecionarCliente() {
                         className={`group text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-1 rounded-full transition-all duration-300 ease-in-out whitespace-nowrap ${
                           conta.tpa_status === "entregue"
                             ? "bg-emerald-100 text-emerald-700"
+                            : conta.tpa_status === "no_balcao"
+                            ? "bg-blue-100 text-blue-700 hover:bg-emerald-100 hover:text-emerald-700"
                             : "bg-amber-100 text-amber-700 hover:bg-emerald-100 hover:text-emerald-700"
                         }`}
                       >
                         {conta.tpa_status === "entregue" ? (
                           "Entregue"
+                        ) : conta.tpa_status === "no_balcao" ? (
+                          <span className="relative">
+                            <span className="flex items-center gap-1">
+                              <Smartphone size={10} />
+                              No Balcão
+                            </span>
+                            <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-1">
+                              <CheckCheck size={10} />
+                              Confirmar
+                            </span>
+                          </span>
                         ) : (
                           <span className="relative">
                             <span className="group-hover:opacity-0 transition-opacity duration-300">Pend.</span>
