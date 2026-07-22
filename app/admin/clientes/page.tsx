@@ -14,6 +14,8 @@ import {
   BarChart3,
   AlertTriangle,
   UserPlus,
+  Store,
+  MapPin,
 } from "lucide-react";
 import {
   Dialog,
@@ -29,12 +31,28 @@ import {
 } from "@/app/admin/actions";
 import { createBrowserClient } from "@/lib/supabase/client";
 import { PACOTES } from "@/lib/types";
+import { ProvinciaSelect } from "@/components/ui/provincia-select";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
+import { ChartTooltip } from "@/components/chart-tooltip";
 
 export default function AdminClientesPage() {
   const [loading, setLoading] = useState(true);
   const [clientes, setClientes] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [filtroProvincia, setFiltroProvincia] = useState("todas");
+  const [filtroMercado, setFiltroMercado] = useState("todos");
 
   // Edit dialog
   const [editOpen, setEditOpen] = useState(false);
@@ -91,10 +109,24 @@ export default function AdminClientesPage() {
     }
   }
 
+  // Load clients
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshKey]);
+
+  // Load markets on mount (needed for charts)
+  useEffect(() => {
+    async function loadMercados() {
+      const { data } = await supabase
+        .from("markets")
+        .select("id, nome, provincia")
+        .order("nome");
+      setMercados(data ?? []);
+    }
+    loadMercados();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Stats
   const totalClientes = clientes.length;
@@ -117,14 +149,98 @@ export default function AdminClientesPage() {
     .map(([nome, valor]) => ({ nome, valor }))
     .sort((a, b) => b.valor - a.valor);
 
-  // Filter
+  // ─── Client counts by market ───
+  const clientesPorMercado: { nome: string; clientes: number; contas: number }[] = [];
+  const mercadoMap = new Map(mercados.map((m: any) => [m.id, m]));
+  const contasPorMercado: Record<string, { clientes: Set<string>; contas: number }> = {};
+
+  clientes.forEach((cliente: any) => {
+    const contas = cliente.accounts ?? [];
+    const mercadosVisitados = new Set<string>();
+    contas.forEach((conta: any) => {
+      const mid = conta.mercado_id;
+      if (!mid) return;
+      if (!contasPorMercado[mid]) {
+        contasPorMercado[mid] = { clientes: new Set(), contas: 0 };
+      }
+      contasPorMercado[mid].clientes.add(cliente.id);
+      contasPorMercado[mid].contas++;
+    });
+  });
+
+  Object.entries(contasPorMercado).forEach(([mid, data]) => {
+    const market = mercadoMap.get(mid);
+    clientesPorMercado.push({
+      nome: market?.nome ?? mid.substring(0, 8),
+      clientes: data.clientes.size,
+      contas: data.contas,
+    });
+  });
+  clientesPorMercado.sort((a, b) => b.clientes - a.clientes);
+
+  // ─── Client counts by province ───
+  const clientesPorProvincia: { nome: string; clientes: number; contas: number }[] = [];
+  const mercadosPorProvincia: Record<string, string[]> = {};
+  mercados.forEach((m: any) => {
+    if (!mercadosPorProvincia[m.provincia]) mercadosPorProvincia[m.provincia] = [];
+    mercadosPorProvincia[m.provincia].push(m.id);
+  });
+
+  Object.entries(mercadosPorProvincia).forEach(([provincia, mIds]) => {
+    let totalClientes = 0;
+    let totalContas = 0;
+    const clientesSet = new Set<string>();
+    mIds.forEach((mid) => {
+      const data = contasPorMercado[mid];
+      if (data) {
+        data.clientes.forEach((cid) => clientesSet.add(cid));
+        totalContas += data.contas;
+      }
+    });
+    clientesPorProvincia.push({
+      nome: provincia,
+      clientes: clientesSet.size,
+      contas: totalContas,
+    });
+  });
+  clientesPorProvincia.sort((a, b) => b.clientes - a.clientes);
+
+  const CORES_GRAFICO = ["#e91e63", "#9c27b0", "#3f51b5", "#009688", "#ff5722", "#ff9800", "#795548", "#607d8b", "#4caf50", "#f44336"];
+
+  // Markets filtered by province (for dropdown)
+  const mercadosDropdown = filtroProvincia === "todas"
+    ? mercados
+    : mercados.filter((m: any) => m.provincia === filtroProvincia);
+
+  // Filter clients by search + province + market
   const filteredClientes = clientes.filter((c: any) => {
     const q = search.toLowerCase();
-    return (
+    const matchesSearch = !search ||
       c.nome.toLowerCase().includes(q) ||
       c.bi.toLowerCase().includes(q) ||
-      c.telefone?.toLowerCase().includes(q)
-    );
+      c.telefone?.toLowerCase().includes(q);
+    if (!matchesSearch) return false;
+
+    const contas = c.accounts ?? [];
+
+    // Province filter: check if any account is in a market of the selected province
+    if (filtroProvincia !== "todas") {
+      const hasAccountInProvincia = contas.some((conta: any) => {
+        const market = mercados.find((m: any) => m.id === conta.mercado_id);
+        return market?.provincia === filtroProvincia;
+      });
+      if (!hasAccountInProvincia) return false;
+    }
+
+    // Market filter: check if any account is in the selected market
+    if (filtroMercado !== "todos") {
+      const hasAccountInMercado = contas.some(
+        (conta: any) => conta.mercado_id === filtroMercado,
+      );
+      if (!hasAccountInMercado) return false;
+    }
+
+    return true;
   });
 
   // ─── Edit handlers ───
@@ -316,41 +432,150 @@ export default function AdminClientesPage() {
         ))}
       </div>
 
-      {/* Classes distribution */}
-      {classesData.length > 0 && (
-        <div className="rounded-2xl border border-bci-line bg-white p-5 shadow-card">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="grid h-9 w-9 place-items-center rounded-xl bg-purple-50 text-purple-600">
-              <BarChart3 size={16} />
+      {/* ─── Charts Section ─── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Classes distribution */}
+        {classesData.length > 0 && (
+          <div className="rounded-2xl border border-bci-line bg-white p-5 shadow-card">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="grid h-9 w-9 place-items-center rounded-xl bg-purple-50 text-purple-600">
+                <BarChart3 size={16} />
+              </div>
+              <div>
+                <p className="font-extrabold text-sm text-bci-ink">Distribuição por Classe</p>
+                <p className="text-xs text-bci-muted">Total de {totalContas} contas</p>
+              </div>
             </div>
-            <div>
-              <p className="font-extrabold text-sm text-bci-ink">Distribuição por Classe</p>
-              <p className="text-xs text-bci-muted">Total de {totalContas} contas</p>
+            <div className="h-40 w-full mb-3">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={classesData.map((c, i) => ({ ...c, color: CORES_GRAFICO[i % CORES_GRAFICO.length] }))}
+                    cx="50%" cy="50%"
+                    innerRadius={35}
+                    outerRadius={60}
+                    paddingAngle={3}
+                    dataKey="valor"
+                    nameKey="nome"
+                    animationBegin={0}
+                    animationDuration={1000}
+                    animationEasing="ease-out"
+                    label={(props: any) => `${props.name} ${((props.percent ?? 0) * 100).toFixed(0)}%`}
+                  >
+                    {classesData.map((_, index) => (
+                      <Cell key={index} fill={CORES_GRAFICO[index % CORES_GRAFICO.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<ChartTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {classesData.map((c) => {
+                const pct = totalContas > 0 ? Math.round((c.valor / totalContas) * 100) : 0;
+                return (
+                  <div key={c.nome} className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs">
+                    <span className="font-bold text-bci-ink">{c.nome}</span>
+                    <span className="text-bci-muted">{c.valor} ({pct}%)</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
-          <div className="flex flex-wrap gap-3">
-            {classesData.map((c) => {
-              const pct = totalContas > 0 ? Math.round((c.valor / totalContas) * 100) : 0;
-              return (
-                <div key={c.nome} className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs">
-                  <span className="font-bold text-bci-ink">{c.nome}</span>
-                  <span className="text-bci-muted">{c.valor} ({pct}%)</span>
-                </div>
-              );
-            })}
+        )}
+
+        {/* Clientes por Mercado */}
+        {clientesPorMercado.length > 0 && (
+          <div className="rounded-2xl border border-bci-line bg-white p-5 shadow-card">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-50 text-emerald-600">
+                <Store size={16} />
+              </div>
+              <div>
+                <p className="font-extrabold text-sm text-bci-ink">Clientes por Mercado</p>
+                <p className="text-xs text-bci-muted">Distribuição de clientes pelos mercados</p>
+              </div>
+            </div>
+            <div className="h-48 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={clientesPorMercado} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                  <XAxis dataKey="nome" tick={{ fontSize: 10, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} axisLine={false} tickLine={false} allowDecimals={false} width={30} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Bar dataKey="clientes" name="Clientes" fill="#e91e63" radius={[4, 4, 0, 0]} animationBegin={0} animationDuration={800} animationEasing="ease-out" />
+                  <Bar dataKey="contas" name="Contas" fill="#0f4a8a" radius={[4, 4, 0, 0]} animationBegin={150} animationDuration={800} animationEasing="ease-out" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Clientes por Província */}
+      {clientesPorProvincia.length > 0 && (
+        <div className="rounded-2xl border border-bci-line bg-white p-5 shadow-card">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="grid h-9 w-9 place-items-center rounded-xl bg-blue-50 text-blue-600">
+              <MapPin size={16} />
+            </div>
+            <div>
+              <p className="font-extrabold text-sm text-bci-ink">Clientes por Província</p>
+              <p className="text-xs text-bci-muted">Distribuição geográfica dos clientes</p>
+            </div>
+          </div>
+          <div className="h-56 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={clientesPorProvincia} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                <XAxis dataKey="nome" tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} allowDecimals={false} width={30} />
+                <Tooltip content={<ChartTooltip />} />
+                <Bar dataKey="clientes" name="Clientes" fill="#0f4a8a" radius={[4, 4, 0, 0]} animationBegin={0} animationDuration={800} animationEasing="ease-out" />
+                <Bar dataKey="contas" name="Contas" fill="#e91e63" radius={[4, 4, 0, 0]} animationBegin={150} animationDuration={800} animationEasing="ease-out" />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
       )}
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-2.5 h-4 w-4 text-bci-muted" />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Pesquisar por nome, BI ou telefone..."
-          className="pl-9 w-full sm:w-96 rounded-xl border border-bci-line px-3 py-2 text-sm font-medium outline-none focus:border-bci-navy focus:ring-4 focus:ring-bci-navySoft"
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-3 p-4 rounded-2xl border border-bci-line bg-white">
+        <MapPin size={16} className="text-bci-navy flex-shrink-0" />
+        <span className="text-sm font-bold text-bci-ink flex-shrink-0">Filtrar por:</span>
+
+        <ProvinciaSelect
+          value={filtroProvincia}
+          onChange={(e) => {
+            setFiltroProvincia(e.target.value);
+            setFiltroMercado("todos");
+          }}
+          placeholder="Todas as províncias"
+          className="px-4 py-2 text-sm focus:border-bci-navy"
+          aria-label="Filtrar por província"
         />
+
+        <select
+          value={filtroMercado}
+          onChange={(e) => setFiltroMercado(e.target.value)}
+          className="rounded-xl border border-bci-line bg-white px-4 py-2 text-sm font-medium outline-none focus:border-bci-navy"
+          aria-label="Filtrar por mercado"
+        >
+          <option value="todos">Todos os mercados</option>
+          {mercadosDropdown.map((m: any) => (
+            <option key={m.id} value={m.id}>{m.nome}</option>
+          ))}
+        </select>
+
+        <div className="relative ml-auto">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-bci-muted" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Pesquisar nome, BI ou telefone..."
+            className="pl-9 w-full sm:w-64 rounded-xl border border-bci-line px-3 py-2 text-sm font-medium outline-none focus:border-bci-navy focus:ring-4 focus:ring-bci-navySoft"
+          />
+        </div>
       </div>
 
       {/* Clients table */}
