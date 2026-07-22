@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Bell, BellOff, CheckCheck, Inbox, ArrowLeft, AlertTriangle, UserPlus, CheckCircle } from 'lucide-react';
+import { Bell, BellOff, CheckCheck, Inbox, ArrowLeft, AlertTriangle, UserPlus, CheckCircle, KeyRound, Smartphone } from 'lucide-react';
 import NotificationCard from '@/components/notification-card';
 import type { Notification, NotificationType } from '@/lib/types';
 import Link from 'next/link';
@@ -11,6 +11,8 @@ const FILTER_OPTIONS: { value: NotificationType | 'todas'; label: string; icon: 
   { value: 'alerta_tpa', label: 'Alerta TPA', icon: AlertTriangle, color: 'text-amber-600', activeColor: 'bg-amber-600 text-white' },
   { value: 'abertura_conta', label: 'Abertura Conta', icon: UserPlus, color: 'text-emerald-600', activeColor: 'bg-emerald-600 text-white' },
   { value: 'tpa_entregue', label: 'TPA Entregue', icon: CheckCircle, color: 'text-blue-600', activeColor: 'bg-blue-600 text-white' },
+  { value: 'conta_ativada', label: 'Conta Activada', icon: KeyRound, color: 'text-emerald-600', activeColor: 'bg-emerald-600 text-white' },
+  { value: 'tpa_no_balcao', label: 'TPA no Balcão', icon: Smartphone, color: 'text-blue-600', activeColor: 'bg-blue-600 text-white' },
 ];
 import {
   getAllNotifications,
@@ -79,6 +81,8 @@ export default function AdminNotificacoesPage() {
     alerta_tpa: notificacoes.filter((n) => n.tipo === 'alerta_tpa').length,
     abertura_conta: notificacoes.filter((n) => n.tipo === 'abertura_conta').length,
     tpa_entregue: notificacoes.filter((n) => n.tipo === 'tpa_entregue').length,
+    conta_ativada: notificacoes.filter((n) => n.tipo === 'conta_ativada').length,
+    tpa_no_balcao: notificacoes.filter((n) => n.tipo === 'tpa_no_balcao').length,
   };
 
   return (

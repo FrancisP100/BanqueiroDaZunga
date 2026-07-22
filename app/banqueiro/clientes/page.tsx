@@ -8,6 +8,8 @@ import {
   Search,
   UserCircle,
   ArrowRight,
+  Smartphone,
+  X,
 } from "lucide-react";
 
 export default function GestaoClientes() {
@@ -15,6 +17,7 @@ export default function GestaoClientes() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [clienteCount, setClienteCount] = useState(0);
+  const [filtroNoBalcao, setFiltroNoBalcao] = useState(false);
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -78,11 +81,25 @@ export default function GestaoClientes() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const filteredClientes = clientes.filter(
-    (c) =>
-      c.bi.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.nome.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+  const noBalcaoCount = clientes.filter((c) =>
+    c.contas.some((conta: any) => conta.tpaStatus === "no_balcao"),
+  ).length;
+
+  const filteredClientes = clientes.filter((c) => {
+    // Search filter
+    if (
+      searchTerm &&
+      !c.bi.toLowerCase().includes(searchTerm.toLowerCase()) &&
+      !c.nome.toLowerCase().includes(searchTerm.toLowerCase())
+    ) {
+      return false;
+    }
+    // TPA no balcão filter
+    if (filtroNoBalcao) {
+      return c.contas.some((conta: any) => conta.tpaStatus === "no_balcao");
+    }
+    return true;
+  });
 
   // Número total de clientes para o header
   useEffect(() => {
@@ -103,6 +120,33 @@ export default function GestaoClientes() {
 
       <div className="rounded-2xl border border-bci-line bg-white shadow-card">
         <div className="p-6">
+          {/* Filtro rápido: TPA no balcão */}
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <button
+              onClick={() => setFiltroNoBalcao(!filtroNoBalcao)}
+              className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-bold transition-all duration-200 ${
+                filtroNoBalcao
+                  ? "bg-blue-600 text-white shadow-md"
+                  : "bg-white border border-bci-line text-bci-muted hover:shadow-sm hover:-translate-y-0.5"
+              }`}
+            >
+              <Smartphone size={15} />
+              TPA no Balcão
+              {noBalcaoCount > 0 && (
+                <span className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-extrabold ml-0.5 ${
+                  filtroNoBalcao
+                    ? "bg-white/25 text-white"
+                    : "bg-blue-100 text-blue-700"
+                }`}>
+                  {noBalcaoCount}
+                </span>
+              )}
+              {filtroNoBalcao && (
+                <X size={14} className="ml-0.5" />
+              )}
+            </button>
+          </div>
+
           <div className="relative mb-6">
             <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
             <Input
@@ -164,7 +208,12 @@ export default function GestaoClientes() {
                           {cliente.contas.length}
                         </td>
                         <td className="hidden md:table-cell px-3 sm:px-4 py-3">
-                          {pendentes > 0 ? (
+                          {cliente.contas.some((c: any) => c.tpaStatus === "no_balcao") ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-700 whitespace-nowrap">
+                              <Smartphone size={10} />
+                              No Balcão
+                            </span>
+                          ) : pendentes > 0 ? (
                             <span className="text-amber-600 font-semibold text-xs">
                               {pendentes}
                             </span>
