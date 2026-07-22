@@ -16,7 +16,9 @@ import {
   UserPlus,
   Store,
   MapPin,
+  ExternalLink,
 } from "lucide-react";
+import Link from "next/link";
 import {
   Dialog,
   DialogContent,
@@ -608,7 +610,15 @@ export default function AdminClientesPage() {
                   const abertas = contas.filter((a: any) => a.status === "aberta").length;
                   return (
                     <tr key={cliente.id} className="border-t border-bci-line hover:bg-slate-50/50 transition-colors">
-                      <td className="px-4 py-3 font-bold text-bci-ink">{cliente.nome}</td>
+                      <td className="px-4 py-3">
+                        <Link
+                          href={`/admin/clientes/${cliente.id}`}
+                          className="inline-flex items-center gap-1.5 font-bold text-bci-ink hover:text-bci-navy transition-colors group"
+                        >
+                          {cliente.nome}
+                          <ExternalLink size={12} className="text-bci-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </Link>
+                      </td>
                       <td className="px-4 py-3 text-bci-muted">{cliente.bi}</td>
                       <td className="hidden sm:table-cell px-4 py-3 text-bci-muted">{cliente.telefone ?? "—"}</td>
                       <td className="px-4 py-3 text-center font-semibold text-bci-magenta">{contas.length}</td>
